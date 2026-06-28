@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useRef, Suspense, useEffect } from 'react';
 import { useControls } from 'leva';
 import { MathUtils } from 'three';

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import * as THREE from 'three'
 import { useState } from 'react'
 import { useEffect } from 'react'

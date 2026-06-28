@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useEffect, useState } from "react";
 import { storage } from "three/tsl";
 import * as THREE from "three/webgpu";

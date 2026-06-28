@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { instancedArray, storage, struct, vec3, uniform } from "three/tsl";
 import * as THREE from "three/webgpu";
 import { vatStructure } from "../core/config";

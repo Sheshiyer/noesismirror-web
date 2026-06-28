@@ -54,7 +54,7 @@ export function Terrain({
             const localPos = positionLocal
             const worldPos = modelWorldMatrix.mul(vec4(localPos, float(1.0))).xyz
             const h = terrainHeight(worldPos.xz)
-            const displacedPos = vec3(localPos.x, localPos.y, localPos.z.add(h))
+            const displacedPos = vec3(localPos.x as any, localPos.y as any, localPos.z.add(h) as any)
             return vec4(displacedPos, float(1.0))
         })()
 

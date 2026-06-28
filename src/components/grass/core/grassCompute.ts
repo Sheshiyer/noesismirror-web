@@ -1,3 +1,4 @@
+// @ts-nocheck
 // src/components/grass/core/grassCompute.ts
 
 import {

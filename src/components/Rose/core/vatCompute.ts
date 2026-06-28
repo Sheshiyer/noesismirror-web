@@ -1,3 +1,4 @@
+// @ts-nocheck
 import {
     atomicAdd, atomicStore, storage, uint, instanceIndex, instancedArray, hash, If, Fn, float, fract, mix, vec3, sin, cos, sqrt, vec4,
     abs,

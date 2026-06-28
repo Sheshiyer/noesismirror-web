@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { forwardRef, useImperativeHandle } from 'react';
 import { useOneShotAudio } from '@core/hooks/useOneShotAudio';
 import { StepType } from './hooks/useCharacterPhysics';

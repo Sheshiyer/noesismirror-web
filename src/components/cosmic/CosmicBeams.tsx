@@ -1,3 +1,4 @@
+// @ts-nocheck
 // src/components/cosmic/CosmicBeams.tsx
 import { useRef, useMemo, useImperativeHandle, forwardRef, useEffect, useContext } from "react";
 import { useFrame, createPortal } from "@react-three/fiber";

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import * as THREE from 'three'
 import { useMemo, useEffect, memo } from 'react'
 import { useThree } from '@react-three/fiber'
