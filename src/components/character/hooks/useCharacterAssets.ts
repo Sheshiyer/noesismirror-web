@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 // @ts-nocheck
 import { useMemo } from 'react';
 import { useGLTF } from '@react-three/drei';

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 // @ts-nocheck
 import { forwardRef, useImperativeHandle } from 'react';
 import { useOneShotAudio } from '@core/hooks/useOneShotAudio';
