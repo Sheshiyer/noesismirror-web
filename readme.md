@@ -1,10 +1,10 @@
-# Noesis Mirror — False Earth Base
+# Noesis Mirror
 
-An interactive, person-specific 3D world built on top of [False Earth](https://github.com/momentchan/false-earth) by Ming-Jyun Hung. Each world is defined by a `world-config.json` beacon pack; as you walk the procedural terrain, beacons become approachable and can be opened to reveal readings, audio, video, slides, or study guides.
+A person-specific, walkable 3D field for the Tryambakam Noesis engine. Each world is defined by a `world-config.json` beacon pack; as you move through the procedural terrain, beacons become approachable and can be opened to reveal readings, audio, video, slides, or study guides. Proximity is the interface.
 
 ## What it is
 
-- **Procedural world**: False Earth's WebGPU grass, terrain, sky, and third-person character.
+- **Procedural field**: WebGPU grass, terrain, sky, and third-person character rendered as a navigable mirror.
 - **Beacon packs**: A JSON pack per person places interactive content beacons in the world.
 - **Discovery UI**: Glassmorphism discovery panel, modal asset viewer, keyboard navigation, reduced-motion support, and a live HUD.
 - **Routing**: `/:personId` loads a person's world (`/harshita` loads `public/packs/harshita/world-config.json`).
@@ -20,7 +20,7 @@ An interactive, person-specific 3D world built on top of [False Earth](https://g
 
 ```bash
 npm install
-npm run dev    # HTTPS dev server (WebGPU requires a secure context in most browsers)
+npm run dev    # HTTP dev server on http://localhost:5174
 npm run build
 npm run preview
 ```
@@ -98,7 +98,7 @@ src/
 
 ## Attribution
 
-This project builds on **False Earth** by Ming-Jyun Hung.
+The 3D renderer, procedural terrain, and character controller are derived from **False Earth** by Ming-Jyun Hung.
 See [ATTRIBUTION.md](./ATTRIBUTION.md) for full details.
 
-Noesis-specific features are original work.
+Noesis-specific features (person-specific worlds, `world-config.json` beacon packs, discovery UI, asset viewers, keyboard navigation, reduced-motion support, and HUD) are original work layered on top of that base.

@@ -1,56 +1,18 @@
-/* eslint-disable */
-// @ts-nocheck
+import { useControls } from "leva";
 import { useEffect, useMemo } from "react";
 import * as THREE from "three";
 import { uniform, vec2, vec3 } from "three/tsl";
-import { TIP_COLOR_PRESETS } from "../core/config";
-
-const GRASS_PARAMS = {
-  bladeHeightMin: 0.4,
-  bladeHeightMax: 0.8,
-  bladeWidthMin: 0.01,
-  bladeWidthMax: 0.05,
-  bendAmountMin: 0.2,
-  bendAmountMax: 0.6,
-  bladeRandomness: { x: 0.3, y: 0.3, z: 0.2 },
-  baseWidth: 0.35,
-  tipThin: 0.9,
-  thicknessStrength: 0.10,
-  clumpSize: 1.5,
-  clumpBlendSmoothness: 1,
-  centerYaw: 0.1,
-  bladeYaw: 1.2,
-  clumpYaw: 2.7,
-  cullOffset: 2,
-  lodNoiseScale: 0.1,
-  pushRadius: 0.7,
-  pushAmount: 0.4,
-  swayFreqMin: 0.4,
-  swayFreqMax: 1.5,
-  swayStrength: 0.01,
-  windDistanceStart: 50,
-  windDistanceEnd: 100,
-  midSoft: 0.25,
-  rimPos: 0.42,
-  rimSoft: 0.03,
-  baseColor: '#000000',
-  tipColor: TIP_COLOR_PRESETS[0],
-  bladeSeedRange: { x: 0.95, y: 1.03 },
-  clumpSeedRange: { x: 0.9, y: 1.1 },
-  aoPower: 5,
-  flattenAmount: 0.05,
-  roughness: 0.35,
-  metalness: 0.5,
-  emissive: '#61ffef',
-  envMapIntensity: 0.5,
-};
+import { createGrassControls } from "../core/grassControls";
 
 export function useGrassUniforms() {
-    const params = useMemo(() => GRASS_PARAMS, []);
+
+    const [params] = useControls('Grass', () => createGrassControls(), { collapsed: true })
+
 
     const uniforms = useMemo(() => (
         {
             compute: {
+                // Shape Parameters
                 uBladeHeightMin: uniform(0.4),
                 uBladeHeightMax: uniform(0.8),
                 uBladeWidthMin: uniform(0.01),
@@ -59,18 +21,21 @@ export function useGrassUniforms() {
                 uBendAmountMax: uniform(0.6),
                 uBladeRandomness: uniform(new THREE.Vector3(0.3, 0.3, 0.2)),
 
+                // Clump Parameters
                 uClumpSize: uniform(0.8),
-                uClumpBlendSmoothness: uniform(0.2),
+                uClumpBlendSmoothness: uniform(0.2), // Blend region width for attribute mixing
                 uCenterYaw: uniform(1.0),
                 uBladeYaw: uniform(1.2),
                 uClumpYaw: uniform(0.5),
                 uTypeTrendScale: uniform(0.1),
 
+                // Wind Parameters
                 uWindScale: uniform(0.25),
                 uWindSpeed: uniform(0.6),
                 uWindStrength: uniform(0.35),
                 uWindFacing: uniform(0.6),
 
+                // Culling Parameters
                 uCullOffset: uniform(0.8),
                 uLODNoiseScale: uniform(0.1),
 
@@ -123,29 +88,36 @@ export function useGrassUniforms() {
             params.bladeRandomness.z
         )
 
+        // Clump parameters
         uniforms.compute.uClumpSize.value = params.clumpSize
-        uniforms.compute.uClumpBlendSmoothness.value = params.clumpBlendSmoothness
+        uniforms.compute.uClumpBlendSmoothness.value = params.clumpBlendSmoothness 
         uniforms.compute.uCenterYaw.value = params.centerYaw
         uniforms.compute.uBladeYaw.value = params.bladeYaw
         uniforms.compute.uClumpYaw.value = params.clumpYaw
 
+        // Culling parameters
         uniforms.compute.uCullOffset.value = params.cullOffset
+        // LOD parameters
         uniforms.compute.uLODNoiseScale.value = params.lodNoiseScale
+        // Character interaction (used in compute for push vector)
         uniforms.compute.uCharacterPushRadius.value = params.pushRadius
         uniforms.compute.uCharacterPushAmount.value = params.pushAmount
     }, [params, uniforms.compute])
 
     useEffect(() => {
+        // Wind parameters are now managed globally via Wind component
         uniforms.material.uWindSwayFreqMin.value = params.swayFreqMin;
         uniforms.material.uWindSwayFreqMax.value = params.swayFreqMax;
         uniforms.material.uWindSwayStrength.value = params.swayStrength;
         uniforms.material.uWindDistanceStart.value = params.windDistanceStart;
         uniforms.material.uWindDistanceEnd.value = params.windDistanceEnd;
 
+        // Width shaping uniforms
         uniforms.material.uMidSoft.value = params.midSoft;
         uniforms.material.uRimPos.value = params.rimPos;
         uniforms.material.uRimSoft.value = params.rimSoft;
 
+        // Color uniforms
         const baseColor = new THREE.Color(params.baseColor);
         uniforms.material.uBaseColor.value.set(baseColor.r, baseColor.g, baseColor.b);
 
@@ -156,12 +128,14 @@ export function useGrassUniforms() {
         uniforms.material.uClumpSeedRange.value.set(params.clumpSeedRange.x, params.clumpSeedRange.y);
         uniforms.material.uAOPower.value = params.aoPower;
 
-        uniforms.material.uBaseWidth.value = params.baseWidth
-        uniforms.material.uTipThin.value = params.tipThin
-        uniforms.material.uThicknessStrength.value = params.thicknessStrength
+        // Lighting uniforms
+        uniforms.material.uBaseWidth.value = params.baseWidth 
+        uniforms.material.uTipThin.value = params.tipThin 
+        uniforms.material.uThicknessStrength.value = params.thicknessStrength 
 
-        uniforms.material.uCharacterPushRadius.value = params.pushRadius
-        uniforms.material.uCharacterPushAmount.value = params.pushAmount
+        // Character push uniforms
+        uniforms.material.uCharacterPushRadius.value = params.pushRadius 
+        uniforms.material.uCharacterPushAmount.value = params.pushAmount 
         uniforms.material.uCharacterFlattenAmount.value = params.flattenAmount
     }, [params, uniforms.material])
 

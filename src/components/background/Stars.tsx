@@ -1,9 +1,8 @@
-/* eslint-disable */
-// @ts-nocheck
 import { useRef, useMemo, useEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three/webgpu';
 import { uniform, instancedBufferAttribute, Fn, uv, vec3, float, length, smoothstep, mx_hsvtorgb, mx_rgbtohsv, fract, sin, PI2, vec4 } from 'three/tsl';
+import { useControls } from 'leva';
 import { CameraMode, useGameStore } from '../../core/store/gameStore';
 import { uTime } from '../../core/shaders/uniforms';
 
@@ -23,7 +22,6 @@ export function Stars({
   const { camera } = useThree();
   const groupRef = useRef<THREE.Group>(null);
   const cameraMode = useGameStore((state) => state.cameraMode);
-  const rim = 0.95;
 
   const uniforms = useMemo(() => ({
     uScale: uniform(0.25),
@@ -33,6 +31,28 @@ export function Stars({
     uSpeed: uniform(2),
     uIntensity: uniform(1),
   }), []);
+
+  const { rim } = useControls('Stars', {
+    scale: {
+      value: 0.5, min: 0, max: 1, step: 0.01,
+      onChange: (v) => (uniforms.uScale.value = v)
+    },
+    baseColor: {
+      value: '#bbd0f5',
+      onChange: (v) => uniforms.uColor.value.set(v)
+    },
+    hueVariation: {
+      value: 0.1, min: 0, max: 1, step: 0.01,
+      onChange: (v) => (uniforms.uHueVar.value = v)
+    },
+    rim: {
+      value: 0.95, min: 0, max: 1, step: 0.01,
+    },
+    speed: {
+      value: 4, min: 0, max: 10, step: 0.01,
+      onChange: (v) => (uniforms.uSpeed.value = v)
+    },
+  }, { collapsed: true });
 
   const { positionAttribute, seedAttribute } = useMemo(() => {
     const pos = [];
@@ -73,13 +93,16 @@ export function Stars({
     const seed = instancedBufferAttribute(seedAttribute);
     mat.positionNode = instancedBufferAttribute(positionAttribute);
 
+
     const sizeVar = seed.mul(0.5).add(1);
     mat.scaleNode = uniforms.uScale.mul(sizeVar);
+
 
     const baseRGB = uniforms.uColor
     const baseHSV = mx_rgbtohsv(baseRGB);
     const hueShifted = fract(baseHSV.x.add(seed.mul(float(uniforms.uHueVar))));
 
+    // Blink
     const timePhase = uTime.add(seed.mul(PI2)).mul(uniforms.uSpeed);
     const brightAnim = sin(timePhase).mul(float(0.3)).add(float(0.7));
 
@@ -101,6 +124,7 @@ export function Stars({
     s.count = count;
     s.frustumCulled = false;
 
+    // Set seed attribute on the sprite's geometry
     if (s.geometry) {
       s.geometry.setAttribute('seed', seedAttribute);
     }
@@ -108,10 +132,11 @@ export function Stars({
     return s;
   }, [material, count, seedAttribute, positionAttribute]);
 
+  // Reuse rotation axis vector to avoid GC
   const rotationAxis = useMemo(() => new THREE.Vector3(axis[0], axis[1], axis[2]), [axis]);
 
   useEffect(() => {
-    uniforms.uIntensity.value = cameraMode === CameraMode.FPV ? 10 : 1
+    uniforms.uIntensity.value =  cameraMode === CameraMode.FPV ? 10 : 1
   }, [cameraMode])
 
   useFrame(({ clock }) => {

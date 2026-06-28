@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
 import * as THREE from 'three/webgpu'
 import { useMemo, useRef } from 'react'
 import { useThree } from '@react-three/fiber'

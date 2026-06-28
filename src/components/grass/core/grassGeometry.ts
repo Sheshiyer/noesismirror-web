@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
 import * as THREE from 'three/webgpu'
 import { instancedArray } from 'three/tsl'
 import { grassStructure } from './config'

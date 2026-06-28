@@ -1,7 +1,6 @@
 import react from "@vitejs/plugin-react";
 import glsl from "vite-plugin-glsl";
 import { resolve } from "path";
-import basicSsl from "@vitejs/plugin-basic-ssl";
 
 export default {
   base: "./",
@@ -10,10 +9,11 @@ export default {
       '@core': resolve(__dirname, 'packages/three-core/src')
     },
   },
-  plugins: [react(), glsl(), basicSsl()],
+  plugins: [react(), glsl()],
   server: {
     host: true,
-    https: true,
+    https: false,
+    port: 5174,
   },
   build: {
     outDir: "dist",

@@ -25,10 +25,20 @@ export default function DiscoveryPanel({
       role="dialog"
       aria-label={`${beacon.label} discovery panel`}
     >
-      <span className="text-xs uppercase tracking-wider text-white/60 mb-2 block">
-        {beacon.type}
-      </span>
+      <div className="flex items-center gap-2 mb-2">
+        <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-white/10 text-white/70">
+          {beacon.type}
+        </span>
+        {beacon.order && (
+          <span className="text-[10px] uppercase tracking-wider text-white/50">
+            {beacon.order} of 2
+          </span>
+        )}
+      </div>
       <h2 className="text-lg font-semibold mb-1">{beacon.label}</h2>
+      {beacon.context && (
+        <p className="text-xs text-white/60 italic mb-2">{beacon.context}</p>
+      )}
       <p className="text-sm text-white/80 mb-3">{beacon.summary}</p>
       <button
         type="button"

@@ -8,6 +8,8 @@ export interface Beacon {
   type: BeaconType;
   position: { x: number; z: number };
   assetUrl: string;
+  order?: number;
+  context?: string;
 }
 
 export interface WorldConfig {

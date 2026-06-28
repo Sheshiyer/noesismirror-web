@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
 import { useGameStore, CameraMode } from '../../core/store/gameStore';
 import { CameraControls } from '@react-three/drei';
 import { useFPVCamera } from './hooks/useFPVCamera';
@@ -17,6 +15,7 @@ export const CAMERA_LOOKAT = new THREE.Vector3(0, 1, 0);
 export function CameraViewControl({ boneName = 'head' }: Props) {
   const cameraMode = useGameStore((state) => state.cameraMode);
   const characterRef = useGameStore((state) => state.characterRef);
+  const isGameLoaded = useGameStore((state) => state.isGameStarted);
   const isControlEnabled = useGameStore((state) => state.isControlEnabled);
   const setControlEnabled = useGameStore((state) => state.setControlEnabled);
 
@@ -55,25 +54,26 @@ export function CameraViewControl({ boneName = 'head' }: Props) {
     });
   }, [characterRef]);
 
+  // initial sequence, reset camera to back
   useEffect(() => {
-    if (isControlEnabled) return;
+    if (isGameLoaded && !isControlEnabled) {
+      document.body.style.cursor = 'wait';
 
-    document.body.style.cursor = 'wait';
+      let isMounted = true;
 
-    let isMounted = true;
+      resetCamera(true).then(() => {
+        if (isMounted) {
+          setControlEnabled(true);
+          document.body.style.cursor = 'default';
+        }
+      });
 
-    resetCamera(true).then(() => {
-      if (isMounted) {
-        setControlEnabled(true);
+      return () => {
+        isMounted = false;
         document.body.style.cursor = 'default';
-      }
-    });
-
-    return () => {
-      isMounted = false;
-      document.body.style.cursor = 'default';
-    };
-  }, [isControlEnabled, resetCamera, setControlEnabled]);
+      };
+    }
+  }, [isGameLoaded, isControlEnabled, resetCamera, setControlEnabled]);
 
   useEffect(() => {
     if (isControlEnabled && cameraMode !== CameraMode.FPV) {

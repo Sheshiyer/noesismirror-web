@@ -29,7 +29,6 @@ export function useCharacterPhysics(
   const isControlEnabled = useGameStore((state) => state.isControlEnabled);
 
   const sceneRef = useRef<Object3D | null>(null);
-  // eslint-disable-next-line react-hooks/refs -- useAnimations requires a mutable ref to the current scene
   sceneRef.current = scene;
   const { actions } = useAnimations(animations, sceneRef);
 
