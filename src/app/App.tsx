@@ -1,7 +1,7 @@
 /* eslint-disable */
 // @ts-nocheck
 import { WorldConfig } from "../types/world";
-import { Environment } from "@react-three/drei";
+import { Environment, useGLTF } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 import { useEffect, Suspense, useMemo, createContext } from "react";
 import { DirectionalLight } from "../components/DirectionalLight";
@@ -10,7 +10,13 @@ import Effects from "../components/Effects/Effects";
 import { useGameStore } from "../core/store/gameStore";
 import { CameraViewControl } from "../components/camera/CameraViewControl";
 import { WorldController } from "../components/WorldController";
+import { DeviceDetector } from "../core/utils/DeviceDetector";
+import { KeyboardMapper, AudioManager, KTX2Preloader } from "@core";
+import { input, keyBindings } from "../core/input/controls";
+import { BODY_TEXTURE_PATHS, DETAIL_TEXTURE_PATHS, MODEL_PATHS } from "../components/character/config";
 import * as THREE from "three/webgpu";
+
+useGLTF.preload(MODEL_PATHS);
 
 export const BeamSceneContext = createContext<THREE.Scene | null>(null);
 
@@ -21,6 +27,7 @@ export interface AppProps {
 export default function App({ config }: AppProps) {
     const beamScene = useMemo(() => new THREE.Scene(), []);
     const setGpuError = useGameStore((state) => state.setGpuError);
+    const setAudioListener = useGameStore((state) => state.setAudioListener);
     const gpuError = useGameStore((state) => state.gpuError);
 
     useEffect(() => {
@@ -49,6 +56,8 @@ export default function App({ config }: AppProps) {
 
     return (
         <>
+            <DeviceDetector />
+            <KeyboardMapper input={input} keyMap={keyBindings} />
             {!gpuError && (
                 <Canvas
                     camera={{
@@ -71,6 +80,11 @@ export default function App({ config }: AppProps) {
                     }}
                     dpr={1.5}
                 >
+                    <Suspense fallback={null}>
+                        <KTX2Preloader paths={BODY_TEXTURE_PATHS} />
+                        <KTX2Preloader paths={DETAIL_TEXTURE_PATHS} />
+                        <AudioManager onListenerCreated={setAudioListener} />
+                    </Suspense>
                     <BeamSceneContext.Provider value={beamScene}>
                         <WorldController config={config} />
                         <Suspense fallback={null}>

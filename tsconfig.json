@@ -14,11 +14,19 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
+    /* Path mapping */
+    "ignoreDeprecations": "6.0",
+    "baseUrl": ".",
+    "paths": {
+      "@core": ["packages/three-core/src/index.ts"],
+      "@core/*": ["packages/three-core/src/*"]
+    },
+
     /* Linting */
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*", "packages/**/*"]
 }
