@@ -15,7 +15,6 @@ export const CAMERA_LOOKAT = new THREE.Vector3(0, 1, 0);
 export function CameraViewControl({ boneName = 'head' }: Props) {
   const cameraMode = useGameStore((state) => state.cameraMode);
   const characterRef = useGameStore((state) => state.characterRef);
-  const isGameLoaded = useGameStore((state) => state.isGameStarted);
   const isControlEnabled = useGameStore((state) => state.isControlEnabled);
   const setControlEnabled = useGameStore((state) => state.setControlEnabled);
 
@@ -54,26 +53,25 @@ export function CameraViewControl({ boneName = 'head' }: Props) {
     });
   }, [characterRef]);
 
-  // initial sequence, reset camera to back
   useEffect(() => {
-    if (isGameLoaded && !isControlEnabled) {
-      document.body.style.cursor = 'wait';
+    if (isControlEnabled) return;
 
-      let isMounted = true;
+    document.body.style.cursor = 'wait';
 
-      resetCamera(true).then(() => {
-        if (isMounted) {
-          setControlEnabled(true);
-          document.body.style.cursor = 'default';
-        }
-      });
+    let isMounted = true;
 
-      return () => {
-        isMounted = false;
+    resetCamera(true).then(() => {
+      if (isMounted) {
+        setControlEnabled(true);
         document.body.style.cursor = 'default';
-      };
-    }
-  }, [isGameLoaded, isControlEnabled, resetCamera, setControlEnabled]);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      document.body.style.cursor = 'default';
+    };
+  }, [isControlEnabled, resetCamera, setControlEnabled]);
 
   useEffect(() => {
     if (isControlEnabled && cameraMode !== CameraMode.FPV) {

@@ -25,11 +25,14 @@ import {
   fract,
   select,
   dot,
+  greaterThanEqual,
 } from "three/tsl";
 import { rotateAxis } from "../../../core/shaders/terrainHelpers";
 import { DEFAULT_GRASS_AREA_SIZE } from "./config";
-import { safeNormalize2D, } from "../../../../packages/three-core/src/utils/tsl/math";
-import { easeOutCubic, easeOutExpo  } from "@core";
+
+const safeNormalize2D = (v: any) => select(length(v).greaterThan(float(0.0001)), normalize(v), vec2(0.0, 0.0));
+const easeOutCubic = (t: any) => oneMinus(oneMinus(t).pow(3));
+const easeOutExpo = (t: any) => select(t.greaterThanEqual(float(0.999)), float(1.0), oneMinus(float(2.0).pow(t.mul(-10.0))));
 
 // PCG Hash: no sin, no mod — stable and non-repeating (integer in -> random 0..1 out)
 const PCG_MUL = 747796405;
