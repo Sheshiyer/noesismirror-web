@@ -1,111 +1,104 @@
-# False Earth
+# Noesis Mirror — False Earth Base
 
+An interactive, person-specific 3D world built on top of [False Earth](https://github.com/momentchan/false-earth) by Ming-Jyun Hung. Each world is defined by a `world-config.json` beacon pack; as you walk the procedural terrain, beacons become approachable and can be opened to reveal readings, audio, video, slides, or study guides.
 
-<img width="2559" height="1593" alt="螢幕擷取畫面 2026-02-09 173835" src="https://github.com/user-attachments/assets/85adc859-7ab1-44e1-91db-2a9f884c00f4" />
+## What it is
 
-</br>
-
-🔗 **[Live Demo](https://false-earth.mingjyunhung.com/)**
-🔗 **[Article](https://tympanus.net/codrops/2026/04/21/false-earth-from-webgl-limits-to-a-webgpu-driven-world/)**
-
-
-**False Earth** is an interactive WebGPU experience that continues the journey of [Drift](https://github.com/momentchan/drift) - presenting a continuous landscape generated in real time through GPU-based simulations.
-
-
-
-Set after the long drift through space, the project follows an astronaut who arrives on a surface that resembles Earth, yet does not behave like one. As the astronaut moves forward, the ground responds and transforms, leaving visible traces across an endless field. Rather than telling a story through words, the experience unfolds through motion and change—where distance never closes and the environment reveals its nature only through interaction. By navigating this unfamiliar terrain, visitors encounter a world that appears stable at first glance, but gradually exposes uncertain form.
-
-
-## 💡 Attribution
-If you use this project in your own work, please provide credit to the author. 
-
-**Author:** Ming-Jyun Hung  
-**Source:** [https://mingjyunhung.com/](https://mingjyunhung.com/)
-
-
----
-
-Built with React Three Fiber and Three.js WebGPU (TSL): GPU-computed grass, procedural terrain, VAT roses, and a playable character.
-
-## Features
-
-- **WebGPU grass**: Compute shaders (TSL) for blade position, Voronoi clumping, wind, terrain sampling, and character push
-- **Stable, tile-free pattern**: PCG hash for jitter and seeds (no `sin`/`mod`), CPU grid index for stable snapping
-- **LOD**: Distance-based LOD with configurable segment counts and draw buffers
-- **Procedural terrain**: FBM-based height and normals sampled in compute
-- **VAT roses**: Vertex Animation Texture roses with LOD and compute-driven spawn/update
-- **Character**: Third-person character with camera modes (Follow / FPV / Detached), grass push interaction
-- **Cosmic beams**: Animated beam effects in a separate scene
-- **Post-processing**: TSL pipeline with Bloom, DoF, SMAA; PerformanceMonitor for adaptive DPR
+- **Procedural world**: False Earth's WebGPU grass, terrain, sky, and third-person character.
+- **Beacon packs**: A JSON pack per person places interactive content beacons in the world.
+- **Discovery UI**: Glassmorphism discovery panel, modal asset viewer, keyboard navigation, reduced-motion support, and a live HUD.
+- **Routing**: `/:personId` loads a person's world (`/harshita` loads `public/packs/harshita/world-config.json`).
 
 ## Tech Stack
 
-- **React Three Fiber** – React renderer for Three.js
-- **Three.js WebGPU** – WebGPU renderer and backend
-- **TSL (Three Shading Language)** – Compute and vertex/fragment in TypeScript (no raw GLSL for grass)
-- **Vite** – Build and dev server
-- **Leva** – Debug controls
-- **Zustand** – Game state (camera, character, WebGPU error, etc.)
-- **r3f-perf** – Performance monitoring and DPR scaling
+- React 19 + TypeScript + Vite
+- React Three Fiber 9 + Three.js WebGPU renderer + TSL
+- Zustand (game state) + Tailwind CSS (UI) + `react-router-dom`
+- Vitest + Testing Library + jsdom
 
-## Installation
+## Getting Started
 
 ```bash
 npm install
-npm run dev    # HTTPS dev server
+npm run dev    # HTTPS dev server (WebGPU requires a secure context in most browsers)
 npm run build
 npm run preview
 ```
+
+## Verification
+
+```bash
+npm run lint
+npm run typecheck
+npm test
+npm run build
+```
+
+## Adding a Person Pack
+
+Create a directory under `public/packs/<personId>/` and add a `world-config.json` file:
+
+```json
+{
+  "personId": "harshita",
+  "personName": "Harshita",
+  "beacons": [
+    {
+      "id": "study",
+      "label": "Study Guide",
+      "summary": "A curated study guide.",
+      "type": "study",
+      "position": { "x": 5, "z": 5 },
+      "assetUrl": "/packs/harshita/reports/study-guide.md"
+    },
+    {
+      "id": "reading",
+      "label": "Reading Notes",
+      "summary": "Collected reading notes.",
+      "type": "reading",
+      "position": { "x": -5, "z": 8 },
+      "assetUrl": "/packs/harshita/reports/reading.html"
+    }
+  ]
+}
+```
+
+Supported beacon types: `reading`, `audio`, `video`, `slides`, `study`.
+
+## Controls
+
+- **WASD / Arrow keys**: Move the character
+- **Arrow Up/Down/Left/Right (when no modal is open)**: Cycle beacons
+- **Enter**: Open the selected beacon
+- **Escape**: Close the asset viewer
 
 ## Project Structure
 
 ```
 src/
-├── app/
-│   └── App.tsx                 # Canvas, WebGPU init, PerformanceMonitor, DPR context
+├── app/App.tsx              # Canvas + WebGPU renderer
 ├── components/
-│   ├── grass/                  # WebGPU procedural grass
-│   │   ├── core/
-│   │   │   ├── config.ts      # Blades, LOD segments, structure (data0–data3)
-│   │   │   ├── grassCompute.ts # Position, Voronoi, terrain, wind, push (TSL)
-│   │   │   ├── grassMaterial.ts # Vertex unpack + Bezier blade (TSL)
-│   │   │   ├── grassGeometry.ts # Instance buffer, no positions buffer
-│   │   │   └── shaderHelpers.ts # Bezier, wind, PCG hash (hash2to1, hash2to2)
-│   │   ├── GrassWebGPU.tsx     # R3F WebGPU grass root, grid snapping
-│   │   ├── GrassLOD.tsx        # LOD draw buffers and compute dispatch
-│   │   └── hooks/
-│   │       ├── useGrassCompute.ts
-│   │       └── useGrassUniforms.ts
-│   ├── Rose/                   # VAT flowers
-│   │   ├── core/               # vatCompute, vatMaterial, config
-│   │   ├── Rose.tsx / RoseLOD.tsx
-│   │   └── hooks/
-│   ├── character/              # Character mesh, physics, camera
-│   ├── cosmic/                  # Beam effects
-│   ├── Effects/                 # Post-processing (Bloom, DoF, SMAA)
-│   ├── camera/                 # CameraViewControl, follow/FPV
-│   ├── audio/                  # AudioManager, BGM, one-shot
-│   ├── Terrain.tsx
-│   └── DirectionalLight.tsx
-├── core/
-│   ├── shaders/                # Terrain, wind, uniforms (TSL helpers)
-│   ├── store/                  # gameStore (Zustand)
-│   ├── utils/                  # gridSnapping, DeviceDetector, etc.
-│   └── input/                  # Keyboard, touch
-├── ui/                         # LoadingScreen, SideBar, AudioButton, etc.
-└── debug/                      # LevaWrapper, WebGPUPerf
+│   ├── WorldPage.tsx        # UI overlay integration
+│   ├── DiscoveryPanel.tsx   # Beacon discovery panel
+│   ├── AssetViewer.tsx      # Modal asset viewer
+│   ├── BeaconAnnouncer.tsx  # ARIA live region
+│   ├── assetRenderers/      # Per-type asset viewers
+│   ├── character/           # Third-person character
+│   ├── grass/               # WebGPU procedural grass
+│   ├── Terrain.tsx          # Procedural terrain
+│   └── background/          # Starry sky
+├── hooks/
+│   ├── useWorldConfig.ts    # world-config.json loader
+│   ├── useBeaconProximity.ts# Proximity detection
+│   ├── useBeaconKeyboard.ts # Keyboard navigation
+│   └── useReducedMotion.ts  # Reduced-motion preference
+├── types/world.ts           # Beacon / WorldConfig types
+└── utils/buildWorldConfig.ts# Config validation
 ```
 
-## Key Components
+## Attribution
 
-- **Grass**: Compute writes packed per-blade data (position, width/height/bend, rotation, normal, push); material reads only that buffer and builds Bezier blades. Grid snapping uses one blade spacing; CPU passes `uGridIndex` for stable seeds.
-- **Terrain**: FBM height and normals; sampled in grass compute and applied to blade bases.
-- **Rose**: VAT playback with compute for spawn, lifecycle, and LOD routing.
-- **Effects**: TSL post pass combining main scene + beam scene (Bloom, DoF, SMAA).
+This project builds on **False Earth** by Ming-Jyun Hung.
+See [ATTRIBUTION.md](./ATTRIBUTION.md) for full details.
 
-## Development
-
-- **TypeScript** throughout
-- **TSL** for all grass and effects shaders (no `vite-plugin-glsl` for grass)
-- **HTTPS** for dev (required for WebGPU in many environments)
-- **Path alias**: `@packages/*` for shared packages
+Noesis-specific features are original work.
