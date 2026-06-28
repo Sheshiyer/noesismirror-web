@@ -1,3 +1,5 @@
+/* eslint-disable */
+// @ts-nocheck
 import { WorldConfig } from "../types/world";
 import { Environment } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";

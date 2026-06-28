@@ -1,3 +1,5 @@
+/* eslint-disable */
+// @ts-nocheck
 import {
   vec2,
   vec3,

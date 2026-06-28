@@ -1,4 +1,4 @@
-import { BeaconType, WorldConfig } from '../types/world';
+import { Beacon, BeaconType, WorldConfig } from '../types/world';
 
 const BEACON_TYPES: BeaconType[] = ['reading', 'audio', 'video', 'slides', 'study'];
 

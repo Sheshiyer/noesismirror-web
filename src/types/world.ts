@@ -1,4 +1,5 @@
 export type BeaconType = 'reading' | 'audio' | 'video' | 'slides' | 'study';
+export type BeaconState = 'dormant' | 'approachable' | 'active';
 
 export interface Beacon {
   id: string;

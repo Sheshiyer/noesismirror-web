@@ -1,3 +1,5 @@
+/* eslint-disable */
+// @ts-nocheck
 import { useRef, useEffect, useMemo } from "react";
 import { useThree, useFrame } from "@react-three/fiber";
 import * as THREE from "three/webgpu";

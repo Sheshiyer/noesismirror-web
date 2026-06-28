@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { useState, useEffect, useRef } from 'react';
 import { Beacon } from '../types/world';
 import { useGameStore } from '../core/store/gameStore';

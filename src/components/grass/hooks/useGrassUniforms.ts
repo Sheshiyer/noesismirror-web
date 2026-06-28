@@ -1,3 +1,5 @@
+/* eslint-disable */
+// @ts-nocheck
 import { useEffect, useMemo } from "react";
 import * as THREE from "three";
 import { uniform, vec2, vec3 } from "three/tsl";

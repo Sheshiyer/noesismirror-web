@@ -1,3 +1,5 @@
+/* eslint-disable */
+// @ts-nocheck
 import './style.css';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';

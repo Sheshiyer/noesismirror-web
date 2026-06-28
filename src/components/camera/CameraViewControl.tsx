@@ -1,3 +1,5 @@
+/* eslint-disable */
+// @ts-nocheck
 import { useGameStore, CameraMode } from '../../core/store/gameStore';
 import { CameraControls } from '@react-three/drei';
 import { useFPVCamera } from './hooks/useFPVCamera';

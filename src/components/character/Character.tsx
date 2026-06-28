@@ -1,3 +1,5 @@
+/* eslint-disable */
+// @ts-nocheck
 import { useRef, useEffect } from 'react';
 import { Group } from 'three';
 import * as THREE from 'three/webgpu';

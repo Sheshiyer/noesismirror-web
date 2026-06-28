@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 @font-face {
     font-family: 'Cousine';
     src: url('/fonts/Cousine-Regular.ttf') format('truetype');
@@ -9,18 +13,12 @@
     text-rendering: optimizeSpeed;
 }
 
-@keyframes breathe {
-    0% { opacity: 1; }
-    50% { opacity: 0.5; }
-    100% { opacity: 1; }
-}
-
-  html,
+html,
 body,
-#root{
+#root {
     background-color: #000;
     position: fixed;
-    top:0;
+    top: 0;
     left: 0;
     width: 100vw;
     height: 100dvh;
