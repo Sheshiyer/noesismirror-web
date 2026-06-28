@@ -6,6 +6,7 @@ import { Terrain } from './Terrain';
 import { StarrySky } from './background/StarrySky';
 import GrassWebGPU from './grass/GrassWebGPU';
 import { Character } from './character';
+import { BeaconGarden } from './BeaconGarden';
 
 export interface WorldControllerProps {
   config: WorldConfig;
@@ -27,6 +28,7 @@ export function WorldController({ config }: WorldControllerProps) {
       <Terrain />
       <GrassWebGPU />
       <Character position={[0, 0, 0]} scale={1} />
+      <BeaconGarden config={config} />
     </Suspense>
   );
 }
