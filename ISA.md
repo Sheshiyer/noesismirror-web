@@ -228,6 +228,24 @@ Ship beacon placement and proximity detection so that every beacon in `world-con
   evidence: useBeaconProximity uses requestAnimationFrame loop reading characterRef.current.position every frame
 ```
 
+## Architecture
+
+<!-- arch-assets:start -->
+
+_Auto-maintained by `ArchitectureAssetsSync.hook.ts` on release events._  
+_Last refreshed: 2026-06-28T23:31:27.179Z_
+
+| Asset | Status | How it's generated |
+|---|---|---|
+| [`docs/architecture/SERVICES.md`](docs/architecture/SERVICES.md) | ✅ current | auto (file scan) |
+| [`docs/architecture/DEPENDENCY-GRAPH.md`](docs/architecture/DEPENDENCY-GRAPH.md) | ✅ current | auto (file scan) |
+| [`docs/architecture/architecture.html`](docs/architecture/architecture.html) | ⬜ not yet generated | manual (LLM skill) |
+| [`docs/architecture/notebooklm-prompt.md`](docs/architecture/notebooklm-prompt.md) | ⬜ not yet generated | manual (LLM skill) |
+
+**To refresh LLM-generated assets:** invoke `/refresh-architecture` in any Claude Code session.
+
+<!-- arch-assets:end -->
+
 ## Decisions
 
 - 2026-06-28: Renamed imported `Beacon` type to `BeaconType` in Beacon.tsx to avoid Babel duplicate-declaration error with the component name.
