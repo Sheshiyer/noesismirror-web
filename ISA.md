@@ -4,11 +4,11 @@ slug: 20260628-000000_false-earth-beacon-proximity
 project: false-earth
 effort: E3
 effort_source: auto
-phase: verify
+phase: complete
 progress: 38/38
 mode: interactive
 started: 2026-06-28T00:00:00Z
-updated: 2026-06-28T12:45:00Z
+updated: 2026-06-28T12:55:00Z
 ---
 
 ## Problem
@@ -232,3 +232,18 @@ Ship beacon placement and proximity detection so that every beacon in `world-con
 
 - 2026-06-28: Renamed imported `Beacon` type to `BeaconType` in Beacon.tsx to avoid Babel duplicate-declaration error with the component name.
 - 2026-06-28: Used `requestAnimationFrame` instead of `useFrame` in `useBeaconProximity` so the hook can be used both inside the Canvas (BeaconGarden) and outside the Canvas (HUD overlay) without R3F context errors.
+- 2026-06-28: Advisor call failed with 401 authentication error; proceeded with manual self-review.
+
+## Changelog
+
+- **2026-06-28 — Cross-context proximity hook**
+  - Conjectured: `useBeaconProximity` should use `@react-three/fiber`'s `useFrame` because the computation is scene-related.
+  - Refuted by: The HUD overlay lives in `WorldPage.tsx`, outside the `\u003cCanvas /\u003e`, so `useFrame` would throw a context error there.
+  - Learned: A `requestAnimationFrame` loop reading `characterRef.current.position` works both inside and outside the R3F canvas and keeps the HUD and markers synchronized.
+  - Criterion now: ISC-14 and ISC-38 verified by source inspection of the RAF loop.
+
+- **2026-06-28 — Beacon type/component name collision**
+  - Conjectured: Importing the `Beacon` type and exporting a `Beacon` component in the same file is idiomatic TypeScript.
+  - Refuted by: Vite's React Fast Refresh Babel transform raised "Duplicate declaration Beacon" at runtime.
+  - Learned: When a component name collides with an imported type in a Vite R3F project, alias the type import (`Beacon as BeaconType`) to avoid the duplicate declaration error.
+  - Criterion now: ISC-1 verified after aliasing the type.
