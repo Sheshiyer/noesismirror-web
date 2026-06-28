@@ -1,3 +1,4 @@
+import { WorldConfig } from "../types/world";
 import { Environment } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 import { useEffect, Suspense, useMemo, createContext } from "react";
@@ -11,7 +12,11 @@ import * as THREE from "three/webgpu";
 
 export const BeamSceneContext = createContext<THREE.Scene | null>(null);
 
-export default function App() {
+export interface AppProps {
+  config: WorldConfig;
+}
+
+export default function App({ config }: AppProps) {
     const beamScene = useMemo(() => new THREE.Scene(), []);
     const setGpuError = useGameStore((state) => state.setGpuError);
     const gpuError = useGameStore((state) => state.gpuError);
@@ -65,7 +70,7 @@ export default function App() {
                     dpr={1.5}
                 >
                     <BeamSceneContext.Provider value={beamScene}>
-                        <WorldController />
+                        <WorldController config={config} />
                         <Suspense fallback={null}>
                             <color attach="background" args={['#000000']} />
                             <CameraViewControl />
