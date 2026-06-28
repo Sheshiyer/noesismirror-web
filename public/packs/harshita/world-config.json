@@ -1,0 +1,26 @@
+{
+  "personId": "harshita",
+  "personName": "Harshita",
+  "beacons": [
+    {
+      "id": "study",
+      "label": "Study Guide",
+      "summary": "A curated study guide for focused learning sessions.",
+      "type": "study",
+      "position": { "x": 14, "z": 9 },
+      "assetUrl": "/packs/harshita/reports/study-guide.md",
+      "order": 1,
+      "context": "First — establish the mental models before reading."
+    },
+    {
+      "id": "reading",
+      "label": "Reading Notes",
+      "summary": "Collected reading notes and highlights.",
+      "type": "reading",
+      "position": { "x": -12, "z": -8 },
+      "assetUrl": "/packs/harshita/reports/reading.html",
+      "order": 2,
+      "context": "Then — apply the models to what you read."
+    }
+  ]
+}
