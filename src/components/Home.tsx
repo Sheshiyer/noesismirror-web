@@ -115,9 +115,8 @@ export default function Home() {
             // Should be handled by useEffect, but fallback
             navigate('/home');
           } else {
-            // Try visiting the protected API to trigger CF Access
-            // This will redirect to CF Access login if not authenticated
-            window.location.href = 'https://noesis-api.sheshnarayan-iyer.workers.dev/api/grants';
+            // Navigate to protected page which will trigger CF Access redirect
+            window.location.href = '/home';
           }
         }}
         style={styles.enterButton}

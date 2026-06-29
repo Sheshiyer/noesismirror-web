@@ -108,8 +108,24 @@ export function AuthGuard({ children }: AuthGuardProps) {
         />
         <div style={styles.title}>ACCESS REQUIRED</div>
         <p style={styles.message}>
-          Please authenticate via Cloudflare Access to enter the field.
+          Please authenticate to enter the field.
         </p>
+        <button
+          onClick={() => {
+            // Navigate to API endpoint which triggers CF Access login
+            window.open('https://noesis-api.sheshnarayan-iyer.workers.dev/api/grants', '_blank');
+          }}
+          style={{
+            ...styles.enterButton,
+            marginTop: '1rem',
+            padding: '0.5rem 1rem',
+            border: '1px solid var(--noesis-gold)',
+            borderRadius: '4px',
+            cursor: 'pointer',
+          }}
+        >
+          [ AUTHENTICATE ]
+        </button>
       </div>
     );
   }
