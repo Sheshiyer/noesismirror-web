@@ -7,23 +7,42 @@ import type { Bindings, Variables } from '../index';
 
 export const worldRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
-/** Asset entry in the R2 manifest */
-interface ManifestAsset {
+/** Asset entry for beacons */
+interface BeaconAsset {
   path: string;
-  type: 'audio' | 'image' | 'video' | 'document' | 'text';
-  title?: string;
+  type: 'audio' | 'image' | 'video' | 'document' | 'text' | 'mind-map';
+  title: string;
   description?: string;
-  metadata?: Record<string, unknown>;
 }
 
-/** R2 manifest structure */
+/** Actual R2 manifest structure from premium-assets generator */
 interface Manifest {
   personId: string;
-  name: string;
-  assets: ManifestAsset[];
-  createdAt?: string;
-  updatedAt?: string;
+  personName: string;
+  generatedAt: string;
+  inputs: Record<string, string>;
+  outputs: Record<string, string>;
+  quality: Array<{ name: string; status: string; detail: string }>;
+  gate?: { passed: boolean };
+  notebooklm?: Record<string, unknown>;
 }
+
+/**
+ * Known asset paths in the premium-assets structure.
+ * These are derived from the directory structure created by the generator.
+ */
+const KNOWN_ASSETS: BeaconAsset[] = [
+  { path: 'audio/deep-dive-long.mp3', type: 'audio', title: 'Deep Dive Audio', description: 'Comprehensive audio exploration' },
+  { path: 'video/video-brief.mp4', type: 'video', title: 'Video Brief', description: 'Visual introduction' },
+  { path: 'mind-map/Harshita\'s Personal Companion Dossier.json', type: 'mind-map', title: 'Mind Map', description: 'Interactive knowledge map' },
+  { path: 'reports/briefing.md', type: 'document', title: 'Briefing Report', description: 'Executive summary' },
+  { path: 'reports/study-guide.md', type: 'document', title: 'Study Guide', description: 'Detailed learning material' },
+  { path: 'quiz/quiz.md', type: 'text', title: 'Quiz', description: 'Knowledge check' },
+  { path: 'flashcards/flashcards.md', type: 'text', title: 'Flashcards', description: 'Quick review cards' },
+  { path: 'slide-decks/detailed.pdf', type: 'document', title: 'Detailed Slides', description: 'Full presentation' },
+  { path: 'slide-decks/preview.pdf', type: 'document', title: 'Preview Slides', description: 'Quick overview presentation' },
+  { path: 'slide-decks/vimshottari-timeline.pdf', type: 'document', title: 'Vimshottari Timeline', description: 'Temporal analysis' },
+];
 
 /** Beacon in the world-config */
 interface Beacon {
@@ -40,7 +59,7 @@ interface Beacon {
 /** World-config structure returned to client */
 interface WorldConfig {
   personId: string;
-  name: string;
+  personName: string;
   beacons: Beacon[];
   metadata: {
     generatedAt: string;
@@ -71,11 +90,12 @@ function generateSpiralPosition(index: number, total: number): { x: number; y: n
 
 /**
  * Transforms an R2 manifest into a world-config with positioned beacons.
+ * Uses KNOWN_ASSETS since the manifest doesn't contain an assets array.
  */
 function transformManifestToWorldConfig(manifest: Manifest): WorldConfig {
-  const beacons: Beacon[] = manifest.assets.map((asset, index) => ({
+  const beacons: Beacon[] = KNOWN_ASSETS.map((asset, index) => ({
     id: `beacon-${index}`,
-    position: generateSpiralPosition(index, manifest.assets.length),
+    position: generateSpiralPosition(index, KNOWN_ASSETS.length),
     asset: {
       path: `/api/assets/${manifest.personId}/${asset.path}`,
       type: asset.type,
@@ -86,11 +106,11 @@ function transformManifestToWorldConfig(manifest: Manifest): WorldConfig {
 
   return {
     personId: manifest.personId,
-    name: manifest.name,
+    personName: manifest.personName,
     beacons,
     metadata: {
-      generatedAt: new Date().toISOString(),
-      assetCount: manifest.assets.length,
+      generatedAt: manifest.generatedAt,
+      assetCount: KNOWN_ASSETS.length,
     },
   };
 }
