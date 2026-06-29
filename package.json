@@ -11,7 +11,12 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "preview": "vite preview",
-    "sync": "npx tsx scripts/noesis-sync.ts"
+    "sync": "npx tsx scripts/noesis-sync.ts",
+    "admin:persons": "npx tsx scripts/admin.ts persons",
+    "admin:world": "npx tsx scripts/admin.ts world",
+    "admin:grants": "npx tsx scripts/admin.ts grants",
+    "admin:grant": "npx tsx scripts/admin.ts grant",
+    "admin:help": "npx tsx scripts/admin.ts --help"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

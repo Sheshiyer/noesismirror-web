@@ -5,3 +5,7 @@ dist
 .vercel
 .vite
 .wrangler
+
+# Local env files
+.dev.vars
+.env
