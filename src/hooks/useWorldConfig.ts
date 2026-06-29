@@ -1,7 +1,19 @@
-/* eslint-disable */
 import { useEffect, useState } from 'react';
 import { WorldConfig } from '../types/world';
 import { buildWorldConfig } from '../utils/buildWorldConfig';
+
+const API_URL = import.meta.env.VITE_API_URL || '';
+
+/** Custom error class for auth-related failures */
+export class AuthError extends Error {
+  constructor(
+    message: string,
+    public readonly status: 401 | 403
+  ) {
+    super(message);
+    this.name = 'AuthError';
+  }
+}
 
 interface UseWorldConfigResult {
   config: WorldConfig | null;
@@ -30,16 +42,34 @@ export function useWorldConfig(personId: string | undefined): UseWorldConfigResu
       setConfig(null);
 
       try {
-        const response = await fetch(`/packs/${encodeURIComponent(id)}/world-config.json`);
+        const response = await fetch(`${API_URL}/api/world/${encodeURIComponent(id)}`, {
+          method: 'GET',
+          credentials: 'include', // Include cookies for CF Access auth
+          headers: {
+            'Accept': 'application/json',
+          },
+        });
+
+        if (response.status === 401) {
+          throw new AuthError('Authentication required. Please log in via Cloudflare Access.', 401);
+        }
+
+        if (response.status === 403) {
+          throw new AuthError(`You do not have access to this reading.`, 403);
+        }
+
         if (!response.ok) {
           throw new Error(`Failed to load config: ${response.status} ${response.statusText}`);
         }
+
         const contentType = response.headers.get('content-type') ?? '';
         if (!contentType.includes('application/json')) {
           throw new Error(`Config not found for "${id}"`);
         }
+
         const raw = await response.json();
         if (cancelled) return;
+
         const parsed = buildWorldConfig(raw);
         setConfig(parsed);
       } catch (err) {
