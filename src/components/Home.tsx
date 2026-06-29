@@ -1,12 +1,91 @@
 import { Link } from 'react-router-dom';
 
+const styles: Record<string, React.CSSProperties> = {
+  container: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: '100vh',
+    background: 'linear-gradient(135deg, var(--noesis-void) 0%, var(--noesis-witness) 55%, var(--noesis-flow) 100%)',
+    fontFamily: 'var(--noesis-font-body)',
+    padding: '2rem',
+    overflow: 'hidden',
+  },
+  sigil: {
+    width: '88px',
+    height: 'auto',
+    marginBottom: '1.5rem',
+    opacity: 0.9,
+    animation: 'khaBreath 6s infinite ease-in-out',
+  },
+  title: {
+    fontFamily: 'var(--noesis-font-display)',
+    fontSize: '1.6rem',
+    fontWeight: 700,
+    letterSpacing: '0.55rem',
+    marginBottom: '0.5rem',
+    color: 'var(--noesis-gold)',
+    textShadow: '0 0 24px rgba(197, 160, 23, 0.18)',
+  },
+  subtitle: {
+    fontFamily: 'var(--noesis-font-body)',
+    fontSize: '0.75rem',
+    letterSpacing: '0.18em',
+    color: 'var(--noesis-silver)',
+    marginBottom: '2rem',
+    textTransform: 'uppercase',
+  },
+  description: {
+    textAlign: 'center',
+    maxWidth: '540px',
+    lineHeight: 1.7,
+    color: 'var(--noesis-parchment)',
+    marginBottom: '2.5rem',
+    opacity: 0.9,
+    animation: 'fadeIn 2s ease',
+  },
+  enterButton: {
+    color: 'var(--noesis-gold)',
+    backgroundColor: 'transparent',
+    border: 'none',
+    letterSpacing: '4px',
+    cursor: 'pointer',
+    fontFamily: 'var(--noesis-font-display)',
+    fontSize: '1rem',
+    fontWeight: 600,
+    textShadow: '0 0 18px rgba(197, 160, 23, 0.35)',
+    animation: 'goldPulse 2.5s infinite ease-in-out',
+    textDecoration: 'none',
+  },
+};
+
 export default function Home() {
   return (
-    <div style={{ padding: '2rem', fontFamily: 'sans-serif', color: '#fff', background: '#000', minHeight: '100vh' }}>
-      <h1>noesismirror</h1>
-      <p>A private 3D memory palace for witness premium packs.</p>
-      <Link to="/p/harshita" style={{ color: '#4dabf7' }}>
-        Enter Harshita’s world →
+    <div style={styles.container}>
+      <img
+        src="/noesis-sigil.png"
+        alt=""
+        style={styles.sigil}
+      />
+
+      <div style={styles.title}>TRYAMBAKAM NOESIS</div>
+
+      <div style={styles.subtitle}>Self-Consciousness as Technology</div>
+
+      <div style={styles.description}>
+        <p style={{ marginBottom: '1rem' }}>
+          A private 3D memory palace for witness premium packs.
+          The 16 symbolic mirrors of the Noesis Engine are cast here as a walkable field.
+        </p>
+        <p>
+          Terrain becomes text. Distance becomes inquiry.
+          What you find depends on where you stand.
+        </p>
+      </div>
+
+      <Link to="/p/harshita" style={styles.enterButton}>
+        [ ENTER FIELD ]
       </Link>
     </div>
   );
