@@ -18,6 +18,10 @@ database_id = "f184be99-579c-4674-953f-45c20669ce4f"
 
 [vars]
 CF_ACCESS_AUD = "11a62a84e3644d9610584bb2da4ca5b69f32f8dd486c43b714f67cd02ad303fd"
-CF_ACCESS_TEAM = "red-queen-4dfa.cloudflareaccess.com"
+# CF_ACCESS_TEAM must be the BARE subdomain (e.g. "red-queen-4dfa"), NOT the full
+# hostname. The middleware appends ".cloudflareaccess.com" when building the JWKS
+# URL. A full hostname here yields "<host>.cloudflareaccess.com.cloudflareaccess.com"
+# and every JWT verification fails.
+CF_ACCESS_TEAM = "red-queen-4dfa"
 # Admin secret is set via `wrangler secret put ADMIN_SECRET` for production.
 # If ADMIN_SECRET is not set, admin endpoints return 404.

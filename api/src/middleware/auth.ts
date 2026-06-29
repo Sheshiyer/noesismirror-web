@@ -30,11 +30,17 @@ function decodeJWTPayload(token: string): JWTPayload | null {
   }
 }
 
+/** Normalizes the team domain so callers can pass either "team" or "team.cloudflareaccess.com". */
+function normalizeTeamDomain(teamDomain: string): string {
+  return teamDomain.replace(/\.cloudflareaccess\.com$/, '');
+}
+
 /**
  * Fetches Cloudflare Access public keys for JWT verification.
  */
 async function getCFAccessPublicKeys(teamDomain: string): Promise<CryptoKey[]> {
-  const certsUrl = `https://${teamDomain}.cloudflareaccess.com/cdn-cgi/access/certs`;
+  const team = normalizeTeamDomain(teamDomain);
+  const certsUrl = `https://${team}.cloudflareaccess.com/cdn-cgi/access/certs`;
   const response = await fetch(certsUrl);
   if (!response.ok) {
     throw new Error(`Failed to fetch CF Access certs: ${response.status}`);
@@ -110,6 +116,12 @@ async function verifyCFAccessToken(
   // Validate audience
   if (!payload.aud?.includes(audience)) {
     throw new Error('JWT audience mismatch');
+  }
+
+  // Validate issuer matches our CF Access team
+  const expectedIss = `https://${normalizeTeamDomain(teamDomain)}.cloudflareaccess.com`;
+  if (payload.iss !== expectedIss) {
+    throw new Error('JWT issuer mismatch');
   }
 
   // Validate expiration

@@ -51,29 +51,39 @@ app.get('/health', (c) => {
   });
 });
 
-// Auth callback - returns JWT token to frontend via redirect
-app.get('/auth/callback', async (c) => {
-  // Check for CF Access token
-  const token = c.req.header('CF-Access-JWT-Assertion');
-  const redirectUrl = c.req.query('redirect') || 'https://314.tryambakam.space';
-  
-  if (!token) {
-    return c.html(`<!DOCTYPE html>
-<html>
-<head><title>Auth Required</title></head>
-<body>
-  <p>Authentication required. Please log in through Cloudflare Access.</p>
-  <script>
-    // Redirect to login if no token - this will trigger CF Access
-    window.location.href = '/api/grants';
-  </script>
-</body>
-</html>`);
+// Hosts allowed as ?redirect= targets on /auth/callback.
+// Anything else falls back to the canonical SPA origin to prevent JWT exfiltration.
+const ALLOWED_REDIRECT_HOSTS = new Set([
+  '314.tryambakam.space',
+  'localhost:5173',
+  'localhost:5174',
+  'localhost:4321',
+]);
+const DEFAULT_REDIRECT = 'https://314.tryambakam.space';
+
+function resolveRedirect(raw: string | undefined): string {
+  if (!raw) return DEFAULT_REDIRECT;
+  try {
+    const u = new URL(raw);
+    if (ALLOWED_REDIRECT_HOSTS.has(u.host)) {
+      return `${u.protocol}//${u.host}${u.pathname.replace(/\/$/, '')}`;
+    }
+  } catch {
+    // fall through
   }
-  
-  // Redirect back to frontend with token in URL hash
-  const redirectWithToken = `${redirectUrl}#token=${encodeURIComponent(token)}`;
-  return c.redirect(redirectWithToken, 302);
+  return DEFAULT_REDIRECT;
+}
+
+// Auth callback - returns JWT token to frontend via redirect.
+// CF Access path-scoped to this route only; if the header is missing the scope is wrong.
+app.get('/auth/callback', async (c) => {
+  const token = c.req.header('CF-Access-JWT-Assertion');
+  if (!token) {
+    return c.json({ error: 'Missing CF Access assertion. Check Access app scope.' }, 401);
+  }
+
+  const redirectUrl = resolveRedirect(c.req.query('redirect'));
+  return c.redirect(`${redirectUrl}/#token=${encodeURIComponent(token)}`, 302);
 });
 
 // Debug endpoint to trace headers (public, no auth)
