@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://55515.tryambakam.space';
+const API_URL = '/api';
 
 interface GrantsResponse {
   grants: string[];

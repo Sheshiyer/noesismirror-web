@@ -6,6 +6,9 @@ compatibility_date = "2024-12-01"
 pattern = "55515.tryambakam.space"
 custom_domain = true
 
+[[routes]]
+pattern = "314.tryambakam.space/api/*"
+
 [[r2_buckets]]
 binding = "PACKS"
 bucket_name = "noesis-packs"
