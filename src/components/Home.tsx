@@ -118,9 +118,9 @@ export default function Home() {
             // Redirect to Cloudflare Access login URL
             // After login, CF Access will redirect back to the provided URL
             const team = 'red-queen-4dfa';
-            const aud = '11a62a84e3644d9610584bb2da4ca5b69f32f8dd486c43b714f67cd02ad303fd';
+            const kid = '5bdf1cdb3337c3ea1e93e544dcb42f91aaabf3ab10fe25bacf28572a3be17010';
             const redirectUrl = encodeURIComponent('https://314.tryambakam.space/home');
-            const loginUrl = `https://${team}.cloudflareaccess.com/cdn-cgi/access/login/314.tryambakam.space?kid=${aud}&redirect_url=${redirectUrl}`;
+            const loginUrl = `https://${team}.cloudflareaccess.com/cdn-cgi/access/login/314.tryambakam.space?kid=${kid}&redirect_url=${redirectUrl}`;
             window.location.href = loginUrl;
           }
         }}
