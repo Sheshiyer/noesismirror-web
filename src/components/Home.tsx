@@ -1,7 +1,16 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { API_URL } from '../config';
 
-const API_URL = 'https://immersiveapi.tryambakam.space';
+interface LocationState {
+  reason?: 'session_expired' | 'no_access';
+  personId?: string;
+}
+
+const FLASH_MESSAGES: Record<NonNullable<LocationState['reason']>, string> = {
+  session_expired: 'Your session expired. Please sign in again.',
+  no_access: 'You do not have access to that reading.',
+};
 
 interface GrantsResponse {
   grants: string[];
@@ -13,6 +22,9 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
+  const flashReason = (location.state as LocationState | null)?.reason;
+  const flashMessage = flashReason ? FLASH_MESSAGES[flashReason] : null;
 
   const getToken = () => localStorage.getItem('noesis_token');
 
@@ -62,18 +74,6 @@ export default function Home() {
 
   useEffect(() => {
     checkAuth();
-  }, [checkAuth]);
-
-  // Check for token in URL hash (from redirect auth)
-  useEffect(() => {
-    const hash = window.location.hash;
-    if (hash.startsWith('#token=')) {
-      const token = hash.substring(7); // Remove '#token='
-      localStorage.setItem('noesis_token', token);
-      // Remove hash from URL without reloading
-      window.history.replaceState(null, '', window.location.pathname);
-      checkAuth();
-    }
   }, [checkAuth]);
 
   const handleAuth = () => {
@@ -133,6 +133,10 @@ export default function Home() {
         <p>The 16 symbolic mirrors of the Noesis Engine are cast here as a walkable field.</p>
         <p>Terrain becomes text. Distance becomes inquiry.</p>
       </div>
+
+      {flashMessage && (
+        <div className="auth-message" role="status">{flashMessage}</div>
+      )}
 
       {!isAuthenticated ? (
         <div className="auth-section">

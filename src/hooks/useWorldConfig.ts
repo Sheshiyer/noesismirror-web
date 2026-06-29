@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { WorldConfig } from '../types/world';
 import { buildWorldConfig } from '../utils/buildWorldConfig';
-
-const API_URL = 'https://immersiveapi.tryambakam.space';
+import { API_URL } from '../config';
 
 /** Custom error class for auth-related failures */
 export class AuthError extends Error {

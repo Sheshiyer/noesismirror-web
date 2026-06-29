@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
-import { useParams } from 'react-router-dom';
-import { useWorldConfig } from '../hooks/useWorldConfig';
+import { useState, useMemo, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useWorldConfig, AuthError } from '../hooks/useWorldConfig';
 import { useBeaconProximity } from '../hooks/useBeaconProximity';
 import { useBeaconKeyboard } from '../hooks/useBeaconKeyboard';
 import { useReducedMotion } from '../hooks/useReducedMotion';
@@ -18,10 +18,22 @@ const BADGE_CLASSES: Record<string, string> = {
 
 export default function WorldPage() {
   const { personId } = useParams<{ personId: string }>();
+  const navigate = useNavigate();
   const { config, loading, error } = useWorldConfig(personId);
   const reducedMotion = useReducedMotion();
   const [selectedBeaconId, setSelectedBeaconId] = useState<string | null>(null);
   const [viewerOpen, setViewerOpen] = useState(false);
+
+  // Re-auth on AuthError: clear stale token (401) and bounce to / with flash state.
+  useEffect(() => {
+    if (!(error instanceof AuthError)) return;
+    if (error.status === 401) {
+      localStorage.removeItem('noesis_token');
+      navigate('/', { replace: true, state: { reason: 'session_expired' } });
+    } else if (error.status === 403) {
+      navigate('/', { replace: true, state: { reason: 'no_access', personId } });
+    }
+  }, [error, navigate, personId]);
 
   const { states, activeBeaconId } = useBeaconProximity(config?.beacons ?? []);
 
