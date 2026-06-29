@@ -130,6 +130,14 @@ export const authMiddleware = createMiddleware<{
   const audience = c.env.CF_ACCESS_AUD;
   const teamDomain = c.env.CF_ACCESS_TEAM;
 
+  // Admin token bypass (for local CLI debugging) — check BEFORE CF Access
+  const adminToken = c.req.header('X-Admin-Token');
+  if (adminToken && c.env.ADMIN_SECRET && adminToken === c.env.ADMIN_SECRET) {
+    c.set('email', 'admin@localhost');
+    c.set('isAdmin', true);
+    return next();
+  }
+
   // Development mode bypass
   if (audience === 'development') {
     c.set('email', 'dev@localhost');

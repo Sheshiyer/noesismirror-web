@@ -8,6 +8,7 @@ import { authMiddleware } from './middleware/auth';
 import { grantsRoutes } from './routes/grants';
 import { worldRoutes } from './routes/world';
 import { assetsRoutes } from './routes/assets';
+import { adminRoutes } from './routes/admin';
 
 /** Cloudflare Worker bindings */
 export interface Bindings {
@@ -15,11 +16,13 @@ export interface Bindings {
   DB: D1Database;
   CF_ACCESS_AUD: string;
   CF_ACCESS_TEAM: string;
+  ADMIN_SECRET?: string;
 }
 
 /** Variables set by middleware */
 export interface Variables {
   email: string;
+  isAdmin?: boolean;
 }
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
@@ -46,6 +49,7 @@ app.use('/api/*', authMiddleware);
 app.route('/api', grantsRoutes);
 app.route('/api', worldRoutes);
 app.route('/api', assetsRoutes);
+app.route('/api/admin', adminRoutes);
 
 // 404 handler
 app.notFound((c) => {

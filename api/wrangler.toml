@@ -14,3 +14,7 @@ database_id = "f184be99-579c-4674-953f-45c20669ce4f"
 [vars]
 CF_ACCESS_AUD = "11a62a84e3644d9610584bb2da4ca5b69f32f8dd486c43b714f67cd02ad303fd"
 CF_ACCESS_TEAM = "red-queen-4dfa.cloudflareaccess.com"
+# Admin secret for local development only.
+# In production, do NOT set ADMIN_SECRET via [vars]; instead, use `wrangler secret put ADMIN_SECRET`.
+# If ADMIN_SECRET is not set, admin endpoints return 404.
+ADMIN_SECRET = "local-admin-dev-secret-123"

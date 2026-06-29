@@ -233,6 +233,8 @@ function main(): void {
   }
 
   // Handle flags first (these do NOT require ADMIN_SECRET)
+  const command = args[0];
+  
   if (command === '--help' || command === '-h') {
     printHelp();
     process.exit(0);
