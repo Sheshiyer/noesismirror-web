@@ -14,6 +14,13 @@ interface JWTPayload {
   exp?: number;
 }
 
+/** Converts base64url to standard base64 with proper '=' padding for atob(). */
+function b64urlDecode(input: string): string {
+  const b64 = input.replace(/-/g, '+').replace(/_/g, '/');
+  const pad = b64.length % 4;
+  return atob(pad ? b64 + '='.repeat(4 - pad) : b64);
+}
+
 /**
  * Decodes a JWT payload without verification (for dev mode).
  * In production, CF Access has already validated the token.
@@ -22,9 +29,7 @@ function decodeJWTPayload(token: string): JWTPayload | null {
   try {
     const parts = token.split('.');
     if (parts.length !== 3) return null;
-    const payload = parts[1];
-    const decoded = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
-    return JSON.parse(decoded);
+    return JSON.parse(b64urlDecode(parts[1]));
   } catch {
     return null;
   }
@@ -82,7 +87,7 @@ async function verifyCFAccessToken(
 
   const [headerB64, payloadB64, signatureB64] = parts;
   const signature = Uint8Array.from(
-    atob(signatureB64.replace(/-/g, '+').replace(/_/g, '/')),
+    b64urlDecode(signatureB64),
     c => c.charCodeAt(0)
   );
   const data = new TextEncoder().encode(`${headerB64}.${payloadB64}`);
