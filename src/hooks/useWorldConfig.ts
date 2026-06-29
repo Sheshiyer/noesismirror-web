@@ -4,6 +4,17 @@ import { buildWorldConfig } from '../utils/buildWorldConfig';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
 
+// Use relative paths for API calls when proxied through same domain
+// This ensures CF Access cookies are sent correctly
+const getApiUrl = (path: string) => {
+  // If API_URL is set and not localhost, use it (for local dev)
+  if (API_URL && !API_URL.includes('localhost')) {
+    return `${API_URL}${path}`;
+  }
+  // Otherwise use relative path (proxied through Vercel/CF)
+  return path;
+};
+
 /** Custom error class for auth-related failures */
 export class AuthError extends Error {
   constructor(
@@ -42,7 +53,7 @@ export function useWorldConfig(personId: string | undefined): UseWorldConfigResu
       setConfig(null);
 
       try {
-        const response = await fetch(`${API_URL}/api/world/${encodeURIComponent(id)}`, {
+        const response = await fetch(getApiUrl(`/api/world/${encodeURIComponent(id)}`), {
           method: 'GET',
           credentials: 'include', // Include cookies for CF Access auth
           headers: {

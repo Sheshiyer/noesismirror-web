@@ -27,10 +27,19 @@ export interface Variables {
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
-// CORS for development
+// CORS: allow local dev + production Vercel + custom domain
 app.use('*', cors({
-  origin: ['http://localhost:5173', 'http://localhost:4321'],
+  origin: [
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://localhost:4321',
+    'https://noesismirror-web-falseearth.vercel.app',
+    'https://314.tryambakam.space',
+  ],
   credentials: true,
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowHeaders: ['Content-Type', 'Authorization', 'X-Admin-Token', 'X-Requested-With'],
+  maxAge: 86400,
 }));
 
 // Health check endpoint
