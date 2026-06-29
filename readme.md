@@ -102,3 +102,7 @@ The 3D renderer, procedural terrain, and character controller are derived from *
 See [ATTRIBUTION.md](./ATTRIBUTION.md) for full details.
 
 Noesis-specific features (person-specific worlds, `world-config.json` beacon packs, discovery UI, asset viewers, keyboard navigation, reduced-motion support, and HUD) are original work layered on top of that base.
+
+## Lint / Type Notes
+
+The False Earth renderer base (`src/components/character`, `grass`, `Rose`, `cosmic`, `background`, `Effects`, `camera`, `debug`, `core/shaders`, `core/utils`, `ui`) is imported code and is excluded from our ESLint and TypeScript checks. Noesis overlay code (`src/components/Beacon*`, `DiscoveryPanel`, `AssetViewer`, `BeaconAnnouncer`, `WorldPage`, `Home`, `hooks/use*`, `types/world.ts`, `utils/*`) is fully checked.
