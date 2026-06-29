@@ -42,7 +42,7 @@ app.use('*', cors({
   maxAge: 86400,
 }));
 
-// Health check endpoint
+// Health check endpoint (public, no auth)
 app.get('/health', (c) => {
   return c.json({
     status: 'ok',
@@ -51,7 +51,16 @@ app.get('/health', (c) => {
   });
 });
 
-// Apply auth middleware to /api/* routes
+// Debug endpoint to trace headers (public, no auth)
+app.get('/debug-headers', (c) => {
+  const headers: Record<string, string> = {};
+  c.req.raw.headers.forEach((value, key) => {
+    headers[key] = value;
+  });
+  return c.json({ headers });
+});
+
+// Apply auth middleware to /api/* routes (protected)
 app.use('/api/*', authMiddleware);
 
 // Mount route modules

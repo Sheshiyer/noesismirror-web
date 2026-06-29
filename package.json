@@ -10,15 +10,17 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "preview": "vite preview",
+    "preview": "npm run build && wrangler dev",
     "sync": "npx tsx scripts/noesis-sync.ts",
     "admin:persons": "npx tsx scripts/admin.ts persons",
     "admin:world": "npx tsx scripts/admin.ts world",
     "admin:grants": "npx tsx scripts/admin.ts grants",
     "admin:grant": "npx tsx scripts/admin.ts grant",
-    "admin:help": "npx tsx scripts/admin.ts --help"
+    "admin:help": "npx tsx scripts/admin.ts --help",
+    "deploy": "npm run build && wrangler deploy"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.42.3",
     "@eslint/js": "^10.0.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
@@ -38,7 +40,8 @@
     "typescript-eslint": "^8.62.0",
     "vite": "^7.1.7",
     "vite-plugin-glsl": "^1.5.4",
-    "vitest": "^4.1.9"
+    "vitest": "^4.1.9",
+    "wrangler": "^4.105.0"
   },
   "dependencies": {
     "@emotion/react": "^11.13.5",
