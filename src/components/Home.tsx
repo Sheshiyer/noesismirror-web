@@ -1,4 +1,6 @@
-import { Link } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 
 const styles: Record<string, React.CSSProperties> = {
   container: {
@@ -61,6 +63,29 @@ const styles: Record<string, React.CSSProperties> = {
 };
 
 export default function Home() {
+  const { isAuthenticated, isLoading, grants } = useAuth();
+  const navigate = useNavigate();
+
+  // If authenticated, redirect to home or first grant
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      if (grants.length === 1) {
+        navigate(`/p/${grants[0]}`, { replace: true });
+      } else {
+        navigate('/home', { replace: true });
+      }
+    }
+  }, [isLoading, isAuthenticated, grants, navigate]);
+
+  // Show loading while checking auth
+  if (isLoading) {
+    return (
+      <div style={styles.container}>
+        <div style={styles.description}>Entering the field...</div>
+      </div>
+    );
+  }
+
   return (
     <div style={styles.container}>
       <img
@@ -84,9 +109,20 @@ export default function Home() {
         </p>
       </div>
 
-      <Link to="/p/harshita" style={styles.enterButton}>
-        [ ENTER FIELD ]
-      </Link>
+      <button
+        onClick={() => {
+          if (isAuthenticated) {
+            // Should be handled by useEffect, but fallback
+            navigate('/home');
+          } else {
+            // Trigger CF Access by visiting a protected endpoint
+            window.location.href = '/home';
+          }
+        }}
+        style={styles.enterButton}
+      >
+        {isAuthenticated ? '[ ENTER FIELD ]' : '[ SIGN IN ]'}
+      </button>
     </div>
   );
 }
