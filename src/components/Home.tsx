@@ -115,13 +115,9 @@ export default function Home() {
             // Should be handled by useEffect, but fallback
             navigate('/home');
           } else {
-            // Redirect to Cloudflare Access login URL
-            // After login, CF Access will redirect back to the provided URL
-            const team = 'red-queen-4dfa';
-            const kid = '5bdf1cdb3337c3ea1e93e544dcb42f91aaabf3ab10fe25bacf28572a3be17010';
-            const redirectUrl = encodeURIComponent('https://314.tryambakam.space/home');
-            const loginUrl = `https://${team}.cloudflareaccess.com/cdn-cgi/access/login/314.tryambakam.space?kid=${kid}&redirect_url=${redirectUrl}`;
-            window.location.href = loginUrl;
+            // Try visiting the protected API to trigger CF Access
+            // This will redirect to CF Access login if not authenticated
+            window.location.href = 'https://noesis-api.sheshnarayan-iyer.workers.dev/api/grants';
           }
         }}
         style={styles.enterButton}
