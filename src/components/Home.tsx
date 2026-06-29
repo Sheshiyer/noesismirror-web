@@ -115,8 +115,12 @@ export default function Home() {
             // Should be handled by useEffect, but fallback
             navigate('/home');
           } else {
-            // Trigger CF Access by visiting a protected endpoint
-            window.location.href = '/home';
+            // Redirect to Cloudflare Access login URL
+            const team = 'red-queen-4dfa';
+            const aud = '11a62a84e3644d9610584bb2da4ca5b69f32f8dd486c43b714f67cd02ad303fd';
+            const redirectUrl = encodeURIComponent('https://314.tryambakam.space/home');
+            const loginUrl = `https://${team}.cloudflareaccess.com/cdn-cgi/access/login?kid=${aud}&redirect_url=${redirectUrl}`;
+            window.location.href = loginUrl;
           }
         }}
         style={styles.enterButton}
