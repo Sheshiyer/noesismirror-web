@@ -1,0 +1,11 @@
+name = "noesis-api"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+
+[[r2_buckets]]
+binding = "PACKS"
+bucket_name = "noesis-packs"
+
+[vars]
+CF_ACCESS_AUD = "development"
+CF_ACCESS_TEAM = "noesis"
