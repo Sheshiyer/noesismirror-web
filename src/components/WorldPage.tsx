@@ -45,62 +45,23 @@ export default function WorldPage() {
 
   if (loading) {
     return (
-      <div style={{
-        position: 'fixed', top: 0, left: 0, width: '100vw', height: '100dvh',
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        background: 'linear-gradient(135deg, var(--noesis-void) 0%, var(--noesis-witness) 55%)',
-        fontFamily: 'var(--noesis-font-body)',
-        color: 'var(--noesis-parchment)',
-        zIndex: 9998,
-      }}>
-        <img
-          src="/noesis-sigil.png"
-          alt=""
-          style={{
-            width: '64px', height: 'auto', marginBottom: '1rem',
-            opacity: 0.85, animation: 'khaBreath 3s infinite ease-in-out',
-          }}
-        />
-        <div style={{
-          fontFamily: 'var(--noesis-font-display)', fontSize: '0.9rem',
-          fontWeight: 600, letterSpacing: '0.3rem',
-          color: 'var(--noesis-gold)',
-          textShadow: '0 0 18px rgba(197, 160, 23, 0.2)',
-        }}>
-          ENTERING FIELD
+      <div className="home-container">
+        <div className="brand-sigil-container">
+          <img src="/brand-logo.svg" alt="Tryambakam Noesis" className="brand-sigil loading" />
         </div>
+        <div className="loading-text">ENTERING FIELD</div>
       </div>
     );
   }
 
   if (error || !config) {
     return (
-      <div style={{
-        position: 'fixed', top: 0, left: 0, width: '100vw', height: '100dvh',
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        background: 'linear-gradient(135deg, var(--noesis-void) 0%, var(--noesis-witness) 55%)',
-        fontFamily: 'var(--noesis-font-body)',
-        color: 'var(--noesis-terracotta)',
-        zIndex: 9998,
-      }}>
-        <img
-          src="/noesis-sigil.png"
-          alt=""
-          style={{
-            width: '64px', height: 'auto', marginBottom: '1rem',
-            opacity: 0.7,
-          }}
-        />
-        <div style={{
-          fontFamily: 'var(--noesis-font-display)', fontSize: '0.8rem',
-          fontWeight: 600, letterSpacing: '0.2rem',
-          color: 'var(--noesis-terracotta)',
-        }}>
-          FIELD UNAVAILABLE
+      <div className="home-container">
+        <div className="brand-sigil-container">
+          <img src="/brand-logo.svg" alt="Tryambakam Noesis" className="brand-sigil" />
         </div>
-        <p style={{ fontFamily: 'var(--noesis-font-body)', fontSize: '0.7rem', color: 'var(--noesis-silver)', marginTop: '0.5rem' }}>
-          {error?.message ?? 'Unknown error'}
-        </p>
+        <div className="title" style={{ color: 'var(--noesis-terracotta)' }}>FIELD UNAVAILABLE</div>
+        <p className="auth-message">{error?.message ?? 'Unknown error'}</p>
       </div>
     );
   }

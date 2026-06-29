@@ -61,3 +61,207 @@ body,
     0%, 100% { opacity: 0.85; transform: scale(1); }
     50% { opacity: 1; transform: scale(1.02); }
 }
+
+/* Home Page - Brand Styling */
+.home-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: linear-gradient(135deg, var(--noesis-void) 0%, var(--noesis-witness) 55%, var(--noesis-flow) 100%);
+    font-family: var(--noesis-font-body);
+    padding: 2rem;
+    overflow: hidden;
+    color: var(--noesis-parchment);
+    animation: fadeIn 1.5s ease;
+}
+
+.brand-sigil-container {
+    margin-bottom: 2rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.brand-sigil {
+    width: 120px;
+    height: auto;
+    opacity: 0.9;
+    animation: breathe 4s infinite ease-in-out;
+    filter: drop-shadow(0 0 20px rgba(203, 152, 102, 0.3));
+}
+
+.brand-sigil.loading {
+    animation: breathe 2s infinite ease-in-out;
+}
+
+.loading-text {
+    font-family: var(--noesis-font-display);
+    font-size: 0.9rem;
+    letter-spacing: 0.3rem;
+    color: var(--noesis-gold);
+    opacity: 0.8;
+    animation: khaBreath 2s infinite ease-in-out;
+}
+
+.title {
+    font-family: var(--noesis-font-display);
+    font-size: 1.8rem;
+    font-weight: 700;
+    letter-spacing: 0.5rem;
+    margin-bottom: 0.5rem;
+    color: #cb9866;
+    text-shadow: 0 0 30px rgba(203, 152, 102, 0.2);
+    text-align: center;
+}
+
+.subtitle {
+    font-family: var(--noesis-font-body);
+    font-size: 0.75rem;
+    letter-spacing: 0.25em;
+    color: var(--noesis-silver);
+    margin-bottom: 2.5rem;
+    text-transform: uppercase;
+    text-align: center;
+}
+
+.description {
+    text-align: center;
+    max-width: 480px;
+    line-height: 1.8;
+    color: var(--noesis-parchment);
+    margin-bottom: 2.5rem;
+    opacity: 0.9;
+    font-size: 0.9rem;
+}
+
+.description p {
+    margin-bottom: 0.75rem;
+}
+
+.auth-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+    animation: fadeIn 0.5s ease;
+}
+
+.auth-message {
+    font-family: var(--noesis-font-body);
+    font-size: 0.85rem;
+    color: var(--noesis-silver);
+    text-align: center;
+    max-width: 400px;
+    line-height: 1.6;
+}
+
+.error-message {
+    font-family: var(--noesis-font-body);
+    font-size: 0.85rem;
+    color: var(--noesis-terracotta);
+    text-align: center;
+    max-width: 400px;
+    margin-bottom: 1.5rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--noesis-terracotta);
+    border-radius: 4px;
+    background: rgba(198, 93, 59, 0.1);
+}
+
+.auth-button {
+    color: #cb9866;
+    background-color: transparent;
+    border: 1px solid #cb9866;
+    padding: 0.75rem 2rem;
+    letter-spacing: 4px;
+    cursor: pointer;
+    font-family: var(--noesis-font-display);
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-shadow: 0 0 18px rgba(203, 152, 102, 0.35);
+    transition: all 0.3s ease;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
+
+.auth-button:hover {
+    background-color: rgba(203, 152, 102, 0.1);
+    box-shadow: 0 0 24px 2px rgba(203, 152, 102, 0.25);
+    transform: translateY(-1px);
+}
+
+.auth-button.enter {
+    border-color: var(--noesis-emerald);
+    color: var(--noesis-emerald);
+    text-shadow: 0 0 18px rgba(16, 181, 167, 0.35);
+}
+
+.auth-button.enter:hover {
+    background-color: rgba(16, 181, 167, 0.1);
+    box-shadow: 0 0 24px 2px rgba(16, 181, 167, 0.25);
+}
+
+.auth-button.secondary {
+    border-color: var(--noesis-silver);
+    color: var(--noesis-silver);
+    font-size: 0.75rem;
+    padding: 0.5rem 1.5rem;
+    letter-spacing: 2px;
+}
+
+.auth-button.secondary:hover {
+    background-color: rgba(138, 155, 168, 0.1);
+    box-shadow: 0 0 16px 1px rgba(138, 155, 168, 0.2);
+}
+
+.grants-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+    animation: fadeIn 0.5s ease;
+    width: 100%;
+    max-width: 400px;
+}
+
+.grants-title {
+    font-family: var(--noesis-font-display);
+    font-size: 0.8rem;
+    letter-spacing: 0.3rem;
+    color: var(--noesis-silver);
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+}
+
+.grants-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    width: 100%;
+}
+
+.grant-button {
+    color: var(--noesis-parchment);
+    background-color: transparent;
+    border: 1px solid rgba(203, 152, 102, 0.4);
+    padding: 0.75rem 1.5rem;
+    letter-spacing: 3px;
+    cursor: pointer;
+    font-family: var(--noesis-font-display);
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    border-radius: 4px;
+    text-transform: uppercase;
+    width: 100%;
+    text-align: center;
+}
+
+.grant-button:hover {
+    background-color: rgba(203, 152, 102, 0.1);
+    border-color: #cb9866;
+    box-shadow: 0 0 20px 1px rgba(203, 152, 102, 0.2);
+    transform: translateY(-1px);
+}

@@ -1,128 +1,151 @@
-import { useAuth } from '../hooks/useAuth';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useEffect } from 'react';
 
-const styles: Record<string, React.CSSProperties> = {
-  container: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: '100vh',
-    background: 'linear-gradient(135deg, var(--noesis-void) 0%, var(--noesis-witness) 55%, var(--noesis-flow) 100%)',
-    fontFamily: 'var(--noesis-font-body)',
-    padding: '2rem',
-    overflow: 'hidden',
-  },
-  sigil: {
-    width: '88px',
-    height: 'auto',
-    marginBottom: '1.5rem',
-    opacity: 0.9,
-    animation: 'khaBreath 6s infinite ease-in-out',
-  },
-  title: {
-    fontFamily: 'var(--noesis-font-display)',
-    fontSize: '1.6rem',
-    fontWeight: 700,
-    letterSpacing: '0.55rem',
-    marginBottom: '0.5rem',
-    color: 'var(--noesis-gold)',
-    textShadow: '0 0 24px rgba(197, 160, 23, 0.18)',
-  },
-  subtitle: {
-    fontFamily: 'var(--noesis-font-body)',
-    fontSize: '0.75rem',
-    letterSpacing: '0.18em',
-    color: 'var(--noesis-silver)',
-    marginBottom: '2rem',
-    textTransform: 'uppercase',
-  },
-  description: {
-    textAlign: 'center',
-    maxWidth: '540px',
-    lineHeight: 1.7,
-    color: 'var(--noesis-parchment)',
-    marginBottom: '2.5rem',
-    opacity: 0.9,
-    animation: 'fadeIn 2s ease',
-  },
-  enterButton: {
-    color: 'var(--noesis-gold)',
-    backgroundColor: 'transparent',
-    border: 'none',
-    letterSpacing: '4px',
-    cursor: 'pointer',
-    fontFamily: 'var(--noesis-font-display)',
-    fontSize: '1rem',
-    fontWeight: 600,
-    textShadow: '0 0 18px rgba(197, 160, 23, 0.35)',
-    animation: 'goldPulse 2.5s infinite ease-in-out',
-    textDecoration: 'none',
-  },
-};
+const API_URL = import.meta.env.VITE_API_URL || 'https://55515.tryambakam.space';
+
+interface GrantsResponse {
+  grants: string[];
+}
 
 export default function Home() {
-  const { isAuthenticated, isLoading, grants } = useAuth();
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [grants, setGrants] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  // If authenticated, redirect to home or first grant
-  useEffect(() => {
-    if (!isLoading && isAuthenticated) {
-      if (grants.length === 1) {
-        navigate(`/p/${grants[0]}`, { replace: true });
-      } else {
-        navigate('/home', { replace: true });
-      }
-    }
-  }, [isLoading, isAuthenticated, grants, navigate]);
+  const checkAuth = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
 
-  // Show loading while checking auth
+    try {
+      const response = await fetch(`${API_URL}/api/grants`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: { 'Accept': 'application/json' },
+      });
+
+      if (response.status === 401) {
+        setIsAuthenticated(false);
+        setGrants([]);
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+
+      const data: GrantsResponse = await response.json();
+      setIsAuthenticated(true);
+      setGrants(data.grants ?? []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Connection failed');
+      setIsAuthenticated(false);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
+
+  const handleAuth = () => {
+    // Navigate to API endpoint which triggers CF Access login
+    window.location.assign(`${API_URL}/api/grants`);
+  };
+
+  const handleEnterField = (personId: string) => {
+    navigate(`/p/${personId}`);
+  };
+
+  const handleEnterDashboard = () => {
+    navigate('/home');
+  };
+
+  // Loading state
   if (isLoading) {
     return (
-      <div style={styles.container}>
-        <div style={styles.description}>Entering the field...</div>
+      <div className="home-container">
+        <div className="brand-sigil-container">
+          <img src="/brand-logo.svg" alt="Tryambakam Noesis" className="brand-sigil loading" />
+        </div>
+        <div className="loading-text">Entering the field...</div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error && !isAuthenticated) {
+    return (
+      <div className="home-container">
+        <div className="brand-sigil-container">
+          <img src="/brand-logo.svg" alt="Tryambakam Noesis" className="brand-sigil" />
+        </div>
+        <div className="title">TRYAMBAKAM NOESIS</div>
+        <div className="subtitle">Self-Consciousness as Technology</div>
+        <div className="error-message">{error}</div>
+        <button className="auth-button" onClick={handleAuth}>
+          [ AUTHENTICATE ]
+        </button>
       </div>
     );
   }
 
   return (
-    <div style={styles.container}>
-      <img
-        src="/noesis-sigil.png"
-        alt=""
-        style={styles.sigil}
-      />
-
-      <div style={styles.title}>TRYAMBAKAM NOESIS</div>
-
-      <div style={styles.subtitle}>Self-Consciousness as Technology</div>
-
-      <div style={styles.description}>
-        <p style={{ marginBottom: '1rem' }}>
-          A private 3D memory palace for witness premium packs.
-          The 16 symbolic mirrors of the Noesis Engine are cast here as a walkable field.
-        </p>
-        <p>
-          Terrain becomes text. Distance becomes inquiry.
-          What you find depends on where you stand.
-        </p>
+    <div className="home-container">
+      <div className="brand-sigil-container">
+        <img src="/brand-logo.svg" alt="Tryambakam Noesis" className="brand-sigil" />
       </div>
 
-      <button
-        onClick={() => {
-          if (isAuthenticated) {
-            // Should be handled by useEffect, but fallback
-            navigate('/home');
-          } else {
-            // Full page navigation to trigger CF Access login
-            window.location.assign('/home');
-          }
-        }}
-        style={styles.enterButton}
-      >
-        {isAuthenticated ? '[ ENTER FIELD ]' : '[ SIGN IN ]'}
-      </button>
+      <div className="title">TRYAMBAKAM NOESIS</div>
+      <div className="subtitle">Self-Consciousness as Technology</div>
+
+      <div className="description">
+        <p>A private 3D memory palace for witness premium packs.</p>
+        <p>The 16 symbolic mirrors of the Noesis Engine are cast here as a walkable field.</p>
+        <p>Terrain becomes text. Distance becomes inquiry.</p>
+      </div>
+
+      {!isAuthenticated ? (
+        <div className="auth-section">
+          <div className="auth-message">Please authenticate to enter the field.</div>
+          <button className="auth-button" onClick={handleAuth}>
+            [ SIGN IN ]
+          </button>
+        </div>
+      ) : grants.length === 0 ? (
+        <div className="auth-section">
+          <div className="auth-message">Your account has no granted readings.</div>
+          <button className="auth-button" onClick={handleEnterDashboard}>
+            [ ENTER DASHBOARD ]
+          </button>
+        </div>
+      ) : grants.length === 1 ? (
+        <div className="auth-section">
+          <button className="auth-button enter" onClick={() => handleEnterField(grants[0])}>
+            [ ENTER FIELD — {grants[0].toUpperCase()} ]
+          </button>
+        </div>
+      ) : (
+        <div className="grants-section">
+          <div className="grants-title">Your Readings</div>
+          <div className="grants-list">
+            {grants.map((grant) => (
+              <button
+                key={grant}
+                className="grant-button"
+                onClick={() => handleEnterField(grant)}
+              >
+                [ {grant.toUpperCase()} ]
+              </button>
+            ))}
+          </div>
+          <button className="auth-button secondary" onClick={handleEnterDashboard}>
+            [ DASHBOARD ]
+          </button>
+        </div>
+      )}
     </div>
   );
 }
