@@ -64,31 +64,22 @@ export default function Home() {
     checkAuth();
   }, [checkAuth]);
 
-  // Listen for auth token from popup
+  // Check for token in URL hash (from redirect auth)
   useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      if (event.data?.type === 'NOESIS_AUTH_TOKEN') {
-        const token = event.data.token;
-        localStorage.setItem('noesis_token', token);
-        checkAuth();
-      }
-    };
-
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
+    const hash = window.location.hash;
+    if (hash.startsWith('#token=')) {
+      const token = hash.substring(7); // Remove '#token='
+      localStorage.setItem('noesis_token', token);
+      // Remove hash from URL without reloading
+      window.history.replaceState(null, '', window.location.pathname);
+      checkAuth();
+    }
   }, [checkAuth]);
 
   const handleAuth = () => {
-    // Open auth popup
-    const popup = window.open(
-      `${API_URL}/auth/callback`,
-      'NoesisAuth',
-      'width=500,height=600,scrollbars=yes'
-    );
-    
-    if (!popup) {
-      setError('Popup blocked. Please allow popups for this site.');
-    }
+    // Redirect to API auth endpoint - more reliable than popup
+    // After CF Access login, API will redirect back with token in URL hash
+    window.location.href = `${API_URL}/auth/callback?redirect=${encodeURIComponent(window.location.origin)}`;
   };
 
   const handleEnterField = (personId: string) => {

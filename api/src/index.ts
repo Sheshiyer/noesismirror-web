@@ -51,10 +51,11 @@ app.get('/health', (c) => {
   });
 });
 
-// Auth callback - returns JWT token to frontend via postMessage
+// Auth callback - returns JWT token to frontend via redirect
 app.get('/auth/callback', async (c) => {
   // Check for CF Access token
   const token = c.req.header('CF-Access-JWT-Assertion');
+  const redirectUrl = c.req.query('redirect') || 'https://314.tryambakam.space';
   
   if (!token) {
     return c.html(`<!DOCTYPE html>
@@ -63,38 +64,16 @@ app.get('/auth/callback', async (c) => {
 <body>
   <p>Authentication required. Please log in through Cloudflare Access.</p>
   <script>
-    // Redirect to login if no token
+    // Redirect to login if no token - this will trigger CF Access
     window.location.href = '/api/grants';
   </script>
 </body>
 </html>`);
   }
   
-  // Return HTML page that sends token to parent window via postMessage
-  return c.html(`<!DOCTYPE html>
-<html>
-<head><title>Auth Callback</title></head>
-<body>
-  <p>Authentication successful. Closing window...</p>
-  <script>
-    (function() {
-      const token = '${token}';
-      // Send token to parent window
-      if (window.opener) {
-        window.opener.postMessage({
-          type: 'NOESIS_AUTH_TOKEN',
-          token: token
-        }, '*');
-        // Close popup after short delay
-        setTimeout(() => window.close(), 500);
-      } else {
-        // If no opener, show token (for debugging)
-        document.body.innerHTML = '<p>Token received. You can close this window.</p>';
-      }
-    })();
-  </script>
-</body>
-</html>`);
+  // Redirect back to frontend with token in URL hash
+  const redirectWithToken = `${redirectUrl}#token=${encodeURIComponent(token)}`;
+  return c.redirect(redirectWithToken, 302);
 });
 
 // Debug endpoint to trace headers (public, no auth)

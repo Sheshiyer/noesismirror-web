@@ -26,22 +26,15 @@ grantsRoutes.get('/grants', async (c) => {
     const isBrowser = accept.includes('text/html') && !accept.includes('application/json');
     
     if (isBrowser) {
-      // Return HTML page that redirects to the app
-      // This is needed because the API is on a different domain than the frontend
+      // Redirect to frontend with token in URL hash
+      const token = c.req.header('CF-Access-JWT-Assertion');
       const redirectPath = grants.length === 1 
         ? `/p/${grants[0]}` 
         : '/home';
       
-      return c.html(`<!DOCTYPE html>
-<html>
-<head>
-  <meta http-equiv="refresh" content="0; url=${redirectPath}">
-  <script>window.location.replace('${redirectPath}');</script>
-</head>
-<body>
-  <p>Authenticated. Redirecting...</p>
-</body>
-</html>`);
+      // Redirect to frontend with token
+      const redirectUrl = `https://314.tryambakam.space${redirectPath}${token ? '#token=' + encodeURIComponent(token) : ''}`;
+      return c.redirect(redirectUrl, 302);
     }
     
     return c.json({ grants });

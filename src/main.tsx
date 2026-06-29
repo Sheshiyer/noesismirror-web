@@ -4,10 +4,12 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Home from './components/Home';
 import WorldPage from './components/WorldPage';
+import { TokenHandler } from './components/TokenHandler';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
+      <TokenHandler />
       <Routes>
         {/* Unified home page with auth built-in */}
         <Route path="/" element={<Home />} />
