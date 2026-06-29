@@ -115,8 +115,8 @@ export default function Home() {
             // Should be handled by useEffect, but fallback
             navigate('/home');
           } else {
-            // Navigate to protected page which will trigger CF Access redirect
-            window.location.href = '/home';
+            // Full page navigation to trigger CF Access login
+            window.location.assign('/home');
           }
         }}
         style={styles.enterButton}

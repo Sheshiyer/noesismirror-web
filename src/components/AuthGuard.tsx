@@ -112,8 +112,10 @@ export function AuthGuard({ children }: AuthGuardProps) {
         </p>
           <button
             onClick={() => {
-              // Navigate to protected page which triggers CF Access login on the same domain
-              window.location.href = '/home';
+              // Full page navigation to /api/grants
+              // This goes through CF Access proxy which will intercept unauthenticated requests
+              // After login, CF Access redirects back here, and we redirect to the app
+              window.location.assign('/api/grants');
             }}
             style={{
               ...styles.enterButton,

@@ -21,6 +21,29 @@ grantsRoutes.get('/grants', async (c) => {
 
     const grants = result.results.map((row) => (row as { person_id: string }).person_id);
     
+    // Detect if this is a browser navigation (not an API fetch)
+    const accept = c.req.header('Accept') || '';
+    const isBrowser = accept.includes('text/html') && !accept.includes('application/json');
+    
+    if (isBrowser) {
+      // Return HTML page that redirects to the app
+      // This is needed because the API is on a different domain than the frontend
+      const redirectPath = grants.length === 1 
+        ? `/p/${grants[0]}` 
+        : '/home';
+      
+      return c.html(`<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="refresh" content="0; url=${redirectPath}">
+  <script>window.location.replace('${redirectPath}');</script>
+</head>
+<body>
+  <p>Authenticated. Redirecting...</p>
+</body>
+</html>`);
+    }
+    
     return c.json({ grants });
   } catch (err) {
     console.error('Database error:', err);
