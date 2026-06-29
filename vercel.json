@@ -1,8 +1,5 @@
 {
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "https://55515.tryambakam.space/api/$1" },
-    { "source": "/health", "destination": "https://55515.tryambakam.space/health" },
-    { "source": "/debug-headers", "destination": "https://55515.tryambakam.space/debug-headers" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

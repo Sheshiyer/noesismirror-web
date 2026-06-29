@@ -27,7 +27,7 @@ export interface Variables {
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
-// CORS: allow local dev + production Vercel + custom domain
+// CORS: allow local dev + production frontend + API domain
 app.use('*', cors({
   origin: [
     'http://localhost:5173',
@@ -49,6 +49,52 @@ app.get('/health', (c) => {
     timestamp: new Date().toISOString(),
     worker: 'noesis-api',
   });
+});
+
+// Auth callback - returns JWT token to frontend via postMessage
+app.get('/auth/callback', async (c) => {
+  // Check for CF Access token
+  const token = c.req.header('CF-Access-JWT-Assertion');
+  
+  if (!token) {
+    return c.html(`<!DOCTYPE html>
+<html>
+<head><title>Auth Required</title></head>
+<body>
+  <p>Authentication required. Please log in through Cloudflare Access.</p>
+  <script>
+    // Redirect to login if no token
+    window.location.href = '/api/grants';
+  </script>
+</body>
+</html>`);
+  }
+  
+  // Return HTML page that sends token to parent window via postMessage
+  return c.html(`<!DOCTYPE html>
+<html>
+<head><title>Auth Callback</title></head>
+<body>
+  <p>Authentication successful. Closing window...</p>
+  <script>
+    (function() {
+      const token = '${token}';
+      // Send token to parent window
+      if (window.opener) {
+        window.opener.postMessage({
+          type: 'NOESIS_AUTH_TOKEN',
+          token: token
+        }, '*');
+        // Close popup after short delay
+        setTimeout(() => window.close(), 500);
+      } else {
+        // If no opener, show token (for debugging)
+        document.body.innerHTML = '<p>Token received. You can close this window.</p>';
+      }
+    })();
+  </script>
+</body>
+</html>`);
 });
 
 // Debug endpoint to trace headers (public, no auth)

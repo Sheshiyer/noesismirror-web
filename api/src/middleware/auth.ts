@@ -145,7 +145,17 @@ export const authMiddleware = createMiddleware<{
   }
 
   // Production: validate CF Access JWT
-  const token = c.req.header('CF-Access-JWT-Assertion');
+  // Check CF Access header first (from proxy), then Authorization header (from frontend)
+  let token = c.req.header('CF-Access-JWT-Assertion');
+  
+  // If no CF Access token, check for Authorization: Bearer token
+  if (!token) {
+    const authHeader = c.req.header('Authorization');
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7); // Remove 'Bearer ' prefix
+    }
+  }
+  
   if (!token) {
     return c.json({ error: 'Missing authentication token' }, 401);
   }

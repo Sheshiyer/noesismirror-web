@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const API_URL = '/api';
+const API_URL = 'https://immersiveapi.tryambakam.space';
 
 interface GrantsResponse {
   grants: string[];
@@ -14,18 +14,32 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
+  const getToken = () => localStorage.getItem('noesis_token');
+
   const checkAuth = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
+    const token = getToken();
+    if (!token) {
+      setIsAuthenticated(false);
+      setGrants([]);
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const response = await fetch(`${API_URL}/api/grants`, {
         method: 'GET',
-        credentials: 'include',
-        headers: { 'Accept': 'application/json' },
+        headers: { 
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
       });
 
       if (response.status === 401) {
+        // Token expired or invalid
+        localStorage.removeItem('noesis_token');
         setIsAuthenticated(false);
         setGrants([]);
         return;
@@ -50,9 +64,31 @@ export default function Home() {
     checkAuth();
   }, [checkAuth]);
 
+  // Listen for auth token from popup
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'NOESIS_AUTH_TOKEN') {
+        const token = event.data.token;
+        localStorage.setItem('noesis_token', token);
+        checkAuth();
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [checkAuth]);
+
   const handleAuth = () => {
-    // Navigate to API endpoint which triggers CF Access login
-    window.location.assign(`${API_URL}/api/grants`);
+    // Open auth popup
+    const popup = window.open(
+      `${API_URL}/auth/callback`,
+      'NoesisAuth',
+      'width=500,height=600,scrollbars=yes'
+    );
+    
+    if (!popup) {
+      setError('Popup blocked. Please allow popups for this site.');
+    }
   };
 
   const handleEnterField = (personId: string) => {

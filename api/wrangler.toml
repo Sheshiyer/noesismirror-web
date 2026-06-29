@@ -2,12 +2,10 @@ name = "noesis-api"
 main = "src/index.ts"
 compatibility_date = "2024-12-01"
 
+# Custom domain for API
 [[routes]]
-pattern = "55515.tryambakam.space"
+pattern = "immersiveapi.tryambakam.space"
 custom_domain = true
-
-[[routes]]
-pattern = "314.tryambakam.space/api/*"
 
 [[r2_buckets]]
 binding = "PACKS"
