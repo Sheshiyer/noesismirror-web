@@ -1,8 +1,8 @@
 {
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "https://noesis-api.sheshnarayan-iyer.workers.dev/api/$1" },
-    { "source": "/health", "destination": "https://noesis-api.sheshnarayan-iyer.workers.dev/health" },
-    { "source": "/debug-headers", "destination": "https://noesis-api.sheshnarayan-iyer.workers.dev/debug-headers" },
+    { "source": "/api/(.*)", "destination": "https://55515.tryambakam.space/api/$1" },
+    { "source": "/health", "destination": "https://55515.tryambakam.space/health" },
+    { "source": "/debug-headers", "destination": "https://55515.tryambakam.space/debug-headers" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

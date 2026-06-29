@@ -2,6 +2,10 @@ name = "noesis-api"
 main = "src/index.ts"
 compatibility_date = "2024-12-01"
 
+[[routes]]
+pattern = "55515.tryambakam.space"
+custom_domain = true
+
 [[r2_buckets]]
 binding = "PACKS"
 bucket_name = "noesis-packs"
