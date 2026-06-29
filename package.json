@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "sync": "npx tsx scripts/noesis-sync.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
