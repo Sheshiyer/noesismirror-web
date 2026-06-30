@@ -100,8 +100,7 @@ interface GameState {
   setCurrentBeaconColor: (hex: string | null, hueShift: number) => void;
 
   // ===== Dev / debug toggles (transient, not persisted) =====
-  showPerf: boolean;
-  setShowPerf: (b: boolean) => void;
+  // showPerf (r3f-perf) was removed — incompatible with three/webgpu renderer.
   showBeaconDebug: boolean;
   setShowBeaconDebug: (b: boolean) => void;
 }
@@ -237,8 +236,6 @@ export const useGameStore = create<GameState>()(
       }),
 
       // ===== Dev / debug toggles (transient) =====
-      showPerf: false,
-      setShowPerf: (b) => set({ showPerf: b }),
       showBeaconDebug: false,
       setShowBeaconDebug: (b) => set({ showBeaconDebug: b }),
     }),

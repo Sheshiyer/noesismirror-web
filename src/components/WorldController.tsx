@@ -1,7 +1,11 @@
 import { Suspense, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useControls } from 'leva';
-import { Perf } from 'r3f-perf';
+// r3f-perf removed: it's WebGL-only (its store types `gl: THREE.WebGLRenderer`)
+// and calling .render() against the WebGPU renderer crashes the world canvas
+// mount with "Wb.render is not a function" / "k1.render is not a function".
+// Same root cause as commit 77e94a9 (drei <Environment>). Use the browser's
+// devtools Performance tab or `?debug=true` + eruda for inline metrics.
 import * as THREE from 'three/webgpu';
 import {
     uTime,
@@ -153,24 +157,20 @@ export function WorldController({ config }: WorldControllerProps) {
         return () => window.removeEventListener('keydown', onKey);
     }, [characterRef]);
 
-    // Fix D + E — Dev tooling toggles (transient, not persisted). Render
-    // r3f-perf GPU/CPU panel and beacon-section debug labels on demand.
-    const showPerf = useGameStore((s) => s.showPerf);
-    const setShowPerf = useGameStore((s) => s.setShowPerf);
+    // Fix D — Dev tooling toggles (transient, not persisted). GPU/CPU perf
+    // overlay (r3f-perf) was removed — incompatible with three/webgpu.
+    // For perf metrics, use browser devtools Performance tab or ?debug=true
+    // + eruda.
     const showBeaconDebug = useGameStore((s) => s.showBeaconDebug);
     const setShowBeaconDebug = useGameStore((s) => s.setShowBeaconDebug);
     useControls('Game.Dev', {
-        showPerf: {
-            value: showPerf,
-            label: '📊 GPU/CPU Perf',
-            onChange: (v: boolean) => { if (v !== showPerf) setShowPerf(v); },
-        },
         showBeaconDebug: {
             value: showBeaconDebug,
             label: '🔍 Beacon labels',
             onChange: (v: boolean) => { if (v !== showBeaconDebug) setShowBeaconDebug(v); },
         },
         respawnHint: { value: 'press R to teleport to origin', editable: false, label: '↻ Respawn' },
+        perfHint: { value: 'devtools Performance tab (r3f-perf unsupported on WebGPU)', editable: false, label: '📊 GPU/CPU' },
     }, { collapsed: true });
 
 
@@ -228,9 +228,6 @@ export function WorldController({ config }: WorldControllerProps) {
     });
 
     return <>
-        {/* Fix E — r3f-perf GPU/CPU panel, toggled via Game.Dev Leva control. */}
-        {showPerf && <Perf position="top-left" />}
-
         {/* Environment - use group visibility to avoid remounting */}
         <Suspense fallback={null}>
             <group visible={enableEnv}>
