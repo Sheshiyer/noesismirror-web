@@ -22,17 +22,20 @@ function b64urlDecode(input: string): string {
 }
 
 /**
- * Decodes a JWT payload without verification (for dev mode).
- * In production, CF Access has already validated the token.
+ * Decodes a JWT segment (header or payload) without verification.
  */
-function decodeJWTPayload(token: string): JWTPayload | null {
+function decodeJWTSegment<T>(segment: string): T | null {
   try {
-    const parts = token.split('.');
-    if (parts.length !== 3) return null;
-    return JSON.parse(b64urlDecode(parts[1]));
+    return JSON.parse(b64urlDecode(segment)) as T;
   } catch {
     return null;
   }
+}
+
+function decodeJWTPayload(token: string): JWTPayload | null {
+  const parts = token.split('.');
+  if (parts.length !== 3) return null;
+  return decodeJWTSegment<JWTPayload>(parts[1]);
 }
 
 /** Normalizes the team domain so callers can pass either "team" or "team.cloudflareaccess.com". */
@@ -40,36 +43,42 @@ function normalizeTeamDomain(teamDomain: string): string {
   return teamDomain.replace(/\.cloudflareaccess\.com$/, '');
 }
 
+interface JWK {
+  kid: string;
+  kty: string;
+  alg?: string;
+  use?: string;
+  e: string;
+  n: string;
+}
+
 /**
- * Fetches Cloudflare Access public keys for JWT verification.
+ * Fetches Cloudflare Access JWKs for JWT verification. Uses the `keys` array
+ * (JWK format) rather than the X.509 `public_certs` array — JWKs import cleanly
+ * via crypto.subtle.importKey('jwk', ...) without ASN.1 parsing.
  */
-async function getCFAccessPublicKeys(teamDomain: string): Promise<CryptoKey[]> {
+async function getCFAccessJWKs(teamDomain: string): Promise<JWK[]> {
   const team = normalizeTeamDomain(teamDomain);
   const certsUrl = `https://${team}.cloudflareaccess.com/cdn-cgi/access/certs`;
   const response = await fetch(certsUrl);
   if (!response.ok) {
-    throw new Error(`Failed to fetch CF Access certs: ${response.status}`);
+    throw new Error(`Failed to fetch CF Access JWKs: ${response.status}`);
   }
-  const data = await response.json() as { public_certs: Array<{ cert: string }> };
-  
-  const keys: CryptoKey[] = [];
-  for (const cert of data.public_certs) {
-    const pemContents = cert.cert
-      .replace('-----BEGIN PUBLIC KEY-----', '')
-      .replace('-----END PUBLIC KEY-----', '')
-      .replace(/\s/g, '');
-    const binaryDer = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0));
-    
-    const key = await crypto.subtle.importKey(
-      'spki',
-      binaryDer,
-      { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
-      false,
-      ['verify']
-    );
-    keys.push(key);
+  const data = await response.json() as { keys?: JWK[] };
+  if (!data.keys?.length) {
+    throw new Error('CF Access JWKS returned no keys');
   }
-  return keys;
+  return data.keys;
+}
+
+async function importJWK(jwk: JWK): Promise<CryptoKey> {
+  return crypto.subtle.importKey(
+    'jwk',
+    jwk,
+    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+    false,
+    ['verify']
+  );
 }
 
 /**
@@ -86,17 +95,27 @@ async function verifyCFAccessToken(
   }
 
   const [headerB64, payloadB64, signatureB64] = parts;
+  const header = decodeJWTSegment<{ kid?: string; alg?: string }>(headerB64);
+  if (!header) {
+    throw new Error('Invalid JWT header');
+  }
+
   const signature = Uint8Array.from(
     b64urlDecode(signatureB64),
     c => c.charCodeAt(0)
   );
   const data = new TextEncoder().encode(`${headerB64}.${payloadB64}`);
 
-  const keys = await getCFAccessPublicKeys(teamDomain);
-  let verified = false;
+  const jwks = await getCFAccessJWKs(teamDomain);
+  // Prefer the JWK whose kid matches the JWT header; fall back to trying all.
+  const candidates = header.kid
+    ? [...jwks.filter(k => k.kid === header.kid), ...jwks.filter(k => k.kid !== header.kid)]
+    : jwks;
 
-  for (const key of keys) {
+  let verified = false;
+  for (const jwk of candidates) {
     try {
+      const key = await importJWK(jwk);
       verified = await crypto.subtle.verify(
         { name: 'RSASSA-PKCS1-v1_5' },
         key,
