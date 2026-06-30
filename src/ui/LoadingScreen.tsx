@@ -113,11 +113,32 @@ export function LoadingScreen() {
         color: 'var(--noesis-parchment)',
         pointerEvents: 'auto',
         fontSize: isMobile ? '0.85rem' : '0.95rem',
-        opacity: 0.99,
+        opacity: 1,
         overflow: 'hidden',
         padding: 'env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)',
-        background: 'linear-gradient(135deg, var(--noesis-void) 0%, var(--noesis-witness) 55%, var(--noesis-flow) 100%)',
+        // Brand-aligned: Void Black base. Constellation grid + faint Witness-Violet
+        // center glow rendered as sibling absolutely-positioned divs so we keep the
+        // "earned density" feel and avoid the flat purple→blue gradient.
+        background: 'var(--noesis-void)',
         fontFamily: 'var(--noesis-font-body)',
+    };
+
+    // Brand backdrop: Sacred-Gold constellation grid + faint Witness-Violet center
+    // glow. Mirrors src/components/Home.tsx Backdrop so the loading and intro
+    // surfaces share the same visual language.
+    const gridStyle: React.CSSProperties = {
+        position: 'absolute', inset: 0, pointerEvents: 'none',
+        opacity: 0.06,
+        backgroundImage: `
+            repeating-linear-gradient(0deg, transparent 0 39px, #C5A017 39px 40px),
+            repeating-linear-gradient(90deg, transparent 0 39px, #C5A017 39px 40px)
+        `,
+        WebkitMaskImage: 'radial-gradient(ellipse at center, black 35%, transparent 80%)',
+        maskImage: 'radial-gradient(ellipse at center, black 35%, transparent 80%)',
+    };
+    const glowStyle: React.CSSProperties = {
+        position: 'absolute', inset: 0, pointerEvents: 'none',
+        background: 'radial-gradient(ellipse at center, rgba(45,0,80,0.35) 0%, transparent 65%)',
     };
 
     const entryContainerStyle: React.CSSProperties = {
@@ -152,7 +173,9 @@ export function LoadingScreen() {
 
     return (
         <div ref={containerRef} style={containerStyle}>
-            <div className='entry' style={entryContainerStyle}>
+            <div style={gridStyle} aria-hidden="true" />
+            <div style={glowStyle} aria-hidden="true" />
+            <div className='entry' style={{ ...entryContainerStyle, position: 'relative', zIndex: 1 }}>
 
                 {/* Left Side: Content Text */}
                 <div style={{
@@ -201,7 +224,10 @@ export function LoadingScreen() {
                         Self-Consciousness as Technology
                     </div>
 
-                    {/* Intro Text */}
+                    {/* Intro Text — brand-coherent: drop the contradictory
+                        "two beacons" line and the inline hot-link styling on
+                        study/reading. The field holds many mirrors; the user
+                        discovers their count by walking. */}
                     <div style={{
                         textAlign: isMobileLandscape ? 'left' : 'center',
                         display: 'inline-block',
@@ -210,20 +236,18 @@ export function LoadingScreen() {
                         marginBottom: isMobileLandscape ? '0' : '2.5rem',
                         fontSize: isMobileLandscape ? '0.8rem' : 'inherit',
                         maxWidth: '540px',
-                        opacity: 0.9,
+                        opacity: 0.88,
                     }}>
-                        <p style={{ marginBottom: '1rem' }}>
-                            The 16 symbolic mirrors of the Noesis Engine are cast here as a walkable field.
-                            Terrain becomes text. Distance becomes inquiry. What you find depends on where you stand.
+                        <p style={{ marginBottom: '1.1rem' }}>
+                            The mirrors of the Noesis Engine are cast here as a walkable field.
+                            Terrain becomes text. Distance becomes inquiry.
                         </p>
 
-                        <p style={{ marginBottom: '1rem' }}>
-                            Two beacons are embedded in this field: <strong style={{ color: 'var(--noesis-flow)' }}>study</strong> and <strong style={{ color: 'var(--noesis-emerald)' }}>reading</strong>.
+                        <p style={{ marginBottom: '1.1rem' }}>
                             They do not announce themselves. Approach them. Proximity is the only interface.
                         </p>
 
-                        <p>
-                            Kha watches from stillness. Ba moves through the field. La is the friction that makes the ground real.
+                        <p style={{ opacity: 0.75 }}>
                             The system succeeds when you no longer need the map.
                         </p>
                     </div>
