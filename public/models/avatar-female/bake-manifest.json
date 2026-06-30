@@ -1,0 +1,18 @@
+{
+  "source_image": {
+    "path": "public/concepts/plumber_female.png",
+    "sha256": "7a01735f46fc3bfbe894fa00e085f8fdf77583194500470c4e19b48c1fc907f5",
+    "bytes": 1009074
+  },
+  "image_to_3d_task": "019f17ab-1d30-722f-8fc1-a19dd6bd2d29",
+  "remesh_task": "019f17b0-3ec3-7222-9ac5-86cd83ba4fd5",
+  "rigging_task": "019f17b2-0416-727c-adc2-fe9de7ff0da3",
+  "note": "Recovered from rigging 300k-face limit: re-baked using existing image-to-3D task + interleaved remesh step. CLI now patched to set should_remesh=true on bake-avatar.",
+  "files": [
+    "Avatar.glb",
+    "Idle.glb",
+    "Walking.glb",
+    "Running.glb",
+    "WalkingBack.glb"
+  ]
+}

@@ -20,14 +20,22 @@ import {
 import { uGlobalHueShift } from "../../core/shaders/uniforms";
 import { shiftHSV } from "../../../packages/three-core/src/utils/tsl/color";
 import { BeamSceneContext } from "../../app/App";
+import { useGameStore } from "../../core/store/gameStore";
+
+// Tier 1 — beam color targets driven by closest beacon. Default glow stays
+// Coherence-Emerald-leaning so the beams look at-home with the rose/star
+// palette when no beacon is in range.
+const DEFAULT_GLOW = new THREE.Color("#10B5A7");
+const DEFAULT_CORE = new THREE.Color("#ffffff");
+
 function createCosmicBeamMaterial() {
   const material = new THREE.MeshBasicNodeMaterial();
   material.depthWrite = true;
   material.blending = THREE.AdditiveBlending;
   material.transparent = true;
 
-  const uCoreColor = uniform(new THREE.Color("#ffffff"));
-  const uGlowColor = uniform(new THREE.Color("#00ffff"));
+  const uCoreColor = uniform(DEFAULT_CORE.clone());
+  const uGlowColor = uniform(DEFAULT_GLOW.clone());
 
   material.fragmentNode = Fn(() => {
     const vUv = uv();
@@ -48,7 +56,7 @@ function createCosmicBeamMaterial() {
     return vec4(hueShifted, fade);
   })();
 
-  return { material };
+  return { material, uCoreColor, uGlowColor };
 }
 
 export interface CosmicBeamsRef {
@@ -76,7 +84,9 @@ export const CosmicBeams = forwardRef<CosmicBeamsRef, {}>((_props, ref) => {
 
   const dummy = useMemo(() => new THREE.Object3D(), []);
   const beamScene = useContext(BeamSceneContext);
-  const { material } = useMemo(() => createCosmicBeamMaterial(), []);
+  const { material, uGlowColor } = useMemo(() => createCosmicBeamMaterial(), []);
+  // Scratch color for the per-frame lerp toward the active beacon tint.
+  const targetGlow = useMemo(() => new THREE.Color(), []);
 
   const startBeamAnimation = (
     position: THREE.Vector3,
@@ -146,7 +156,15 @@ export const CosmicBeams = forwardRef<CosmicBeamsRef, {}>((_props, ref) => {
     };
   }, []);
 
-  useFrame(() => {
+  useFrame((_, delta) => {
+    // Tier 1 — lerp the shared uGlowColor toward the currently-approached
+    // beacon color. When no beacon in range, fall back to DEFAULT_GLOW.
+    const targetHex = useGameStore.getState().currentBeaconColorHex;
+    if (targetHex) targetGlow.set(targetHex);
+    else targetGlow.copy(DEFAULT_GLOW);
+    const lerpFactor = 1 - Math.exp(-delta / 0.25);
+    uGlowColor.value.lerp(targetGlow, lerpFactor);
+
     if (!meshRef.current) return;
     let needsUpdate = false;
 

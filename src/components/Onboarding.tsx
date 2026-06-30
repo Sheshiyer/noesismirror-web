@@ -56,11 +56,6 @@ const SIGIL_STYLE = `
   }
 `;
 
-const CHIP_CLASSES =
-  'border border-noesis-gold/40 bg-noesis-void/60 px-2 py-1 font-mono uppercase tracking-[0.25em] text-[10px] text-noesis-parchment/80';
-
-const KEYBOARD_KEYS = ['WASD', 'SHIFT', 'G', 'ESC'] as const;
-
 function CompassSigil() {
   // Eight short radiating lines plus a center disc — a placeholder for the
   // brand mark; matches the Sacred-Gold palette used elsewhere.
@@ -431,26 +426,9 @@ export default function Onboarding() {
         </div>
       )}
 
-      {/* TP7-006 — keyboard chip strip after the fade clears */}
-      {phase === 'walked' && !chipStripDismissed && (
-        <div className="pointer-events-auto fixed bottom-24 left-1/2 z-[55] -translate-x-1/2">
-          <div className="flex items-center gap-2 bg-noesis-void/70 px-3 py-2 backdrop-blur-sm">
-            {KEYBOARD_KEYS.map((k) => (
-              <span key={k} className={CHIP_CLASSES}>
-                {k}
-              </span>
-            ))}
-            <button
-              type="button"
-              onClick={() => setChipStripDismissed(true)}
-              aria-label="Dismiss controls hint"
-              className="ml-2 font-mono text-sm text-noesis-parchment/40 transition-colors hover:text-noesis-gold"
-            >
-              ×
-            </button>
-          </div>
-        </div>
-      )}
+      {/* TP7-006 — keyboard chip strip removed; HUD owns the persistent strip
+          at bottom-6. Duplicate render was causing two stacked chip pools
+          during the 'walked' phase. */}
 
       {/* TP7-007 — first-walk arrow at bottom-center */}
       {showFirstWalkArrow && (
@@ -530,10 +508,12 @@ export default function Onboarding() {
         </div>
       )}
 
-      {/* TP7-017 — returning-user welcome chip */}
+      {/* Fix C — returning-user welcome chip moved to top-right (was top-center
+          where it collided with the compass at top-16 and the field label).
+          Per bento module 5: peripheral chip register, Satoshi (font-sans). */}
       {returningChip && (
         <div
-          className="pointer-events-none fixed top-24 left-1/2 z-[60] -translate-x-1/2 border border-noesis-gold/40 bg-noesis-void/70 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.3em] text-noesis-parchment/80"
+          className="pointer-events-none fixed top-6 right-6 z-[60] border border-noesis-gold/40 bg-noesis-void/70 px-3 py-2 font-sans text-[10px] uppercase tracking-[0.3em] text-noesis-parchment/80"
           role="status"
           aria-live="polite"
         >

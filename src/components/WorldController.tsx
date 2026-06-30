@@ -1,6 +1,7 @@
 import { Suspense, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useControls } from 'leva';
+import { Perf } from 'r3f-perf';
 import * as THREE from 'three/webgpu';
 import {
     uTime,
@@ -27,6 +28,12 @@ import { Character } from './character';
 import { GrassCullingDebug } from '../debug/GrassCullingDebug';
 import { BeaconGarden } from './BeaconGarden';
 import type { WorldConfig } from '../types/world';
+import {
+  WITNESS_VIOLET_HEX,
+  FLOW_INDIGO_HEX,
+  SACRED_GOLD_HEX,
+  COHERENCE_EMERALD_HEX,
+} from './beacon/sectionColors';
 
 export interface WorldControllerProps {
   config?: WorldConfig;
@@ -68,6 +75,102 @@ export function WorldController({ config }: WorldControllerProps) {
         enableRose: { value: true, label: '🌹 Rose Field' },
         enableGrass: { value: true, label: '🌿 Grass Field' },
         enableGrassDebug: { value: false, label: '🌿 Grass Culling Debug' },
+    }, { collapsed: true });
+
+    // Avatar gender preference (until proper Settings modal exists).
+    // 'auto' uses WorldConfig.gender from the depth-reading report; explicit
+    // overrides win. Persisted across sessions via gameStore.
+    const genderPreference = useGameStore((s) => s.genderPreference);
+    const setGenderPreference = useGameStore((s) => s.setGenderPreference);
+    useControls('Game.Avatar', {
+        gender: {
+            value: genderPreference,
+            options: { Auto: 'auto', Male: 'male', Female: 'female' } as const,
+            label: '👤 Gender',
+            onChange: (v: 'auto' | 'male' | 'female') => {
+                if (v !== genderPreference) setGenderPreference(v);
+            },
+        },
+    }, { collapsed: true });
+
+    // Fix C — Proximity-tint preview. Lets you force a world tint without
+    // walking up to a beacon. Auto = follow whichever beacon you're approaching
+    // (Tier 1 behavior); the other options pin uGlowColor + uHueShift directly.
+    const setCurrentBeaconColor = useGameStore((s) => s.setCurrentBeaconColor);
+    useControls('Game.Tint', {
+        force: {
+            value: 'auto',
+            options: {
+                'Auto (proximity)': 'auto',
+                'Sacred Gold': 'gold',
+                'Witness Violet': 'violet',
+                'Flow Indigo': 'indigo',
+                'Coherence Emerald': 'emerald',
+                'None (clear)': 'none',
+            } as const,
+            label: '🎨 Force tint',
+            onChange: (v: string) => {
+                // Helper to fake the hue shift the way sectionColors does.
+                const HEX_MAP: Record<string, string> = {
+                    gold: SACRED_GOLD_HEX,
+                    violet: WITNESS_VIOLET_HEX,
+                    indigo: FLOW_INDIGO_HEX,
+                    emerald: COHERENCE_EMERALD_HEX,
+                };
+                if (v === 'auto') return; // BeaconGarden's proximity loop drives the store
+                if (v === 'none') { setCurrentBeaconColor(null, 0); return; }
+                const hex = HEX_MAP[v];
+                if (!hex) return;
+                // Quick HSL delta from natural rose hue (0.95) for the rose
+                // material's HSV-shift pipeline. Matches sectionColors.ts logic.
+                const c = new THREE.Color(hex);
+                const hsl = { h: 0, s: 0, l: 0 };
+                c.getHSL(hsl);
+                let delta = hsl.h - 0.95;
+                if (delta > 0.5) delta -= 1.0;
+                if (delta < -0.5) delta += 1.0;
+                setCurrentBeaconColor(hex, delta);
+            },
+        },
+    }, { collapsed: true });
+
+    // Fix F — Respawn-to-origin (R key). Teleports the character group back
+    // to world origin. If the physics layer overrides (Rapier kinematic
+    // controller), this only sticks for one frame — acceptable as escape hatch.
+    const characterRef = useGameStore((s) => s.characterRef);
+    useEffect(() => {
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key !== 'r' && e.key !== 'R') return;
+            // Don't fire inside text inputs / modals
+            const target = e.target as HTMLElement | null;
+            if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
+            const c = characterRef?.current;
+            if (!c) return;
+            c.position.set(0, 0, 0);
+            c.updateMatrixWorld(true);
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [characterRef]);
+
+    // Fix D + E — Dev tooling toggles (transient, not persisted). Render
+    // r3f-perf GPU/CPU panel and beacon-section debug labels on demand.
+    const showPerf = useGameStore((s) => s.showPerf);
+    const setShowPerf = useGameStore((s) => s.setShowPerf);
+    const showBeaconDebug = useGameStore((s) => s.showBeaconDebug);
+    const setShowBeaconDebug = useGameStore((s) => s.setShowBeaconDebug);
+    useControls('Game.Dev', {
+        showPerf: {
+            value: showPerf,
+            label: '📊 GPU/CPU Perf',
+            onChange: (v: boolean) => { if (v !== showPerf) setShowPerf(v); },
+        },
+        showBeaconDebug: {
+            value: showBeaconDebug,
+            label: '🔍 Beacon labels',
+            onChange: (v: boolean) => { if (v !== showBeaconDebug) setShowBeaconDebug(v); },
+        },
+        respawnHint: { value: 'press R to teleport to origin', editable: false, label: '↻ Respawn' },
     }, { collapsed: true });
 
 
@@ -125,6 +228,9 @@ export function WorldController({ config }: WorldControllerProps) {
     });
 
     return <>
+        {/* Fix E — r3f-perf GPU/CPU panel, toggled via Game.Dev Leva control. */}
+        {showPerf && <Perf position="top-left" />}
+
         {/* Environment - use group visibility to avoid remounting */}
         <Suspense fallback={null}>
             <group visible={enableEnv}>
@@ -145,7 +251,7 @@ export function WorldController({ config }: WorldControllerProps) {
 
 
             <AsyncCompile id="character" onReady={setComponentReady} debug={debugMode}>
-                <Character position={[0, 0, 0]} scale={1} visible={enableCharacter} />
+                <Character position={[0, 0, 0]} scale={1} visible={enableCharacter} worldGender={config?.gender} />
             </AsyncCompile>
 
             {config && (

@@ -28,11 +28,20 @@ export default function Rose({
 
     const { vatData, spawn } = useRoseCompute(count, lodBuffers, uniforms.compute)
 
-    useFrame(() => {
+    useFrame((_, delta) => {
         if (!characterRef?.current) return
         characterRef.current.getWorldPosition(characterPos)
         uniforms.mat.uCharacterWorldPos.value.copy(characterPos)
         uniforms.compute.uCharacterWorldPos.value.copy(characterPos)
+
+        // Tier 1 — lerp uHueShift toward the currently-approached beacon's
+        // pre-computed hue-shift delta. 200ms-tau smoothing so transitions
+        // are sub-second but visible. Reads from gameStore via getState to
+        // avoid re-subscribing every frame.
+        const target = useGameStore.getState().currentBeaconHueShift
+        const lerp = 1 - Math.exp(-delta / 0.2)
+        const u = uniforms.mat.uHueShift
+        if (u) u.value += (target - u.value) * lerp
     })
 
     useEffect(() => {

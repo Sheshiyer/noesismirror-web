@@ -64,9 +64,20 @@ export function buildWorldConfig(raw: unknown): WorldConfig {
     throw new Error('Invalid world-config: "beacons" must be an array');
   }
 
+  // Optional `gender` from the depth-reading report. If present, must be one
+  // of the three valid values; otherwise dropped silently and the FalseEarth
+  // gender-resolution flow falls back to 'auto' → 'male' default.
+  let gender: 'male' | 'female' | 'androgynous' | undefined;
+  if (data.gender !== undefined && data.gender !== null) {
+    if (data.gender === 'male' || data.gender === 'female' || data.gender === 'androgynous') {
+      gender = data.gender;
+    }
+  }
+
   return {
     personId: data.personId,
     personName: data.personName,
     beacons: data.beacons.map(assertBeacon),
+    ...(gender !== undefined ? { gender } : {}),
   };
 }

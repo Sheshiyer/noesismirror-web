@@ -1,0 +1,39 @@
+{
+  "source_image": {
+    "path": "public/concepts/plumber_avatar_v2.png",
+    "sha256": "9a5b277bd28abb8bc0875f6e153badf2f34c78978b890386f6e68eed6fc45672",
+    "bytes": 1008692
+  },
+  "image_to_3d_task": {
+    "id": "019f172e-a54b-7f71-9e10-d78072aee129",
+    "credits": 30
+  },
+  "rigging_task": {
+    "id": "019f1731-1f3d-7cd6-afb4-31803b42d702",
+    "credits": 5,
+    "height_meters": 1.7
+  },
+  "animations": [
+    {
+      "action_id": 0,
+      "task_id": "019f1732-0a7b-7bcc-92cd-50d79943c7e6",
+      "file": "Idle.glb",
+      "credits": 3
+    },
+    {
+      "action_id": 544,
+      "task_id": "019f1732-0c2b-7465-a205-c1656971d11a",
+      "file": "WalkingBack.glb",
+      "credits": 3
+    }
+  ],
+  "files": [
+    "Avatar.glb",
+    "Idle.glb",
+    "Walking.glb",
+    "Running.glb",
+    "WalkingBack.glb"
+  ],
+  "wall_clock_ms": 256961,
+  "baked_at": "2026-06-30T06:23:37.111Z"
+}

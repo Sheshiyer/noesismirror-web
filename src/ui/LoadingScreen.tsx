@@ -3,39 +3,9 @@ import { useEffect, useRef, useState, useMemo } from "react";
 import { useGameStore } from "../core/store/gameStore";
 import gsap from "gsap";
 
-// --- Sub Components ---
-const Key = ({ children }: { children: React.ReactNode }) => (
-    <span style={{
-        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-        minWidth: '18px', height: '22px', padding: '0 5px', margin: '0 4px',
-        border: '1px solid var(--noesis-silver)', borderRadius: '4px', background: 'rgba(240,237,227,0.06)',
-        fontFamily: 'var(--noesis-font-mono)', fontSize: '0.65rem', fontWeight: 'bold', color: 'var(--noesis-parchment)',
-        lineHeight: 1, verticalAlign: 'middle', boxSizing: 'border-box'
-    }}>
-        {children}
-    </span>
-);
-
-const MouseIcon = () => (
-    <span style={{
-        display: 'inline-block', position: 'relative', width: '12px', height: '18px', margin: '0 4px',
-        border: '1.5px solid var(--noesis-silver)', borderRadius: '6px', verticalAlign: 'middle', opacity: 0.8
-    }}>
-        <span style={{
-            position: 'absolute', top: '3px', left: '50%', transform: 'translateX(-50%)',
-            width: '1.5px', height: '4px', background: 'var(--noesis-silver)', borderRadius: '1px'
-        }} />
-    </span>
-);
-
-const InstructionRow = ({ input, label }: { input: React.ReactNode, label: string }) => (
-    <div style={{ display: 'flex', alignItems: 'center' }}>
-        {input}
-        <span style={{ marginLeft: '6px', fontSize: '0.65rem', letterSpacing: '1.5px', fontWeight: 500, transform: 'translateY(1px)', color: 'var(--noesis-silver)', fontFamily: 'var(--noesis-font-body)' }}>
-            {label}
-        </span>
-    </div>
-);
+// Fix E — Key, MouseIcon, InstructionRow components removed. They were used
+// by the inline desktop/mobile control hint row on the loading screen, which
+// is now gone (HUD chip strip takes over once isGameStarted flips true).
 
 // --- Main Component ---
 
@@ -154,21 +124,31 @@ export function LoadingScreen() {
         height: isMobileLandscape ? '100%' : 'auto'
     };
 
+    // Fix D — brand-aligned button per bento module 4. Drop the gold-pulse
+    // box-shadow halo (read as a notification chip) in favor of a hairline
+    // Ba Arc gradient underline (Coherence Emerald → Sacred Gold). Bioluminescent
+    // breath via opacity on khaBreath (6s), replaces the 2.5s goldPulse.
     const playButtonStyle: React.CSSProperties = {
         color: gpuError ? 'var(--noesis-terracotta)' : 'var(--noesis-gold)',
-        backgroundColor: 'transparent',
+        background: 'transparent',
         border: 'none',
-        letterSpacing: '4px',
-        transition: 'all 0.5s ease',
-        transform: 'scale(1)',
+        borderBottom: isReadyToStart && !gpuError
+            ? '1px solid transparent'
+            : '1px solid rgba(240, 237, 227, 0.12)',
+        borderImage: isReadyToStart && !gpuError
+            ? 'linear-gradient(90deg, var(--noesis-emerald), var(--noesis-gold)) 1'
+            : 'none',
+        paddingBottom: '6px',
+        letterSpacing: isMobile ? '4px' : '6px',
+        transition: 'opacity 0.4s ease, transform 0.4s ease',
         cursor: gpuError ? 'default' : (isReadyToStart ? 'pointer' : 'wait'),
         opacity: gpuError ? 0.8 : 1,
         whiteSpace: 'nowrap',
-        animation: isReadyToStart ? 'goldPulse 2.5s infinite ease-in-out' : 'none',
+        animation: isReadyToStart ? 'khaBreath 6s infinite ease-in-out' : 'none',
         fontFamily: 'var(--noesis-font-display)',
         fontSize: isMobile ? '0.85rem' : '1rem',
         fontWeight: 600,
-        textShadow: isReadyToStart ? '0 0 18px rgba(197, 160, 23, 0.35)' : 'none',
+        textShadow: 'none',
     };
 
     return (
@@ -224,32 +204,22 @@ export function LoadingScreen() {
                         Self-Consciousness as Technology
                     </div>
 
-                    {/* Intro Text — brand-coherent: drop the contradictory
-                        "two beacons" line and the inline hot-link styling on
-                        study/reading. The field holds many mirrors; the user
-                        discovers their count by walking. */}
+                    {/* Fix E — Single Plumber-voiced invocation. Replaces three
+                        paragraphs of app-description-shaped prose. The mechanics
+                        introduce themselves once the player walks. */}
                     <div style={{
                         textAlign: isMobileLandscape ? 'left' : 'center',
                         display: 'inline-block',
-                        lineHeight: '1.7',
+                        lineHeight: '1.6',
                         color: 'var(--noesis-parchment)',
                         marginBottom: isMobileLandscape ? '0' : '2.5rem',
-                        fontSize: isMobileLandscape ? '0.8rem' : 'inherit',
+                        fontSize: isMobileLandscape ? '0.85rem' : '1.05rem',
                         maxWidth: '540px',
-                        opacity: 0.88,
+                        opacity: 0.85,
+                        fontStyle: 'italic',
+                        fontFamily: 'var(--noesis-font-body)',
                     }}>
-                        <p style={{ marginBottom: '1.1rem' }}>
-                            The mirrors of the Noesis Engine are cast here as a walkable field.
-                            Terrain becomes text. Distance becomes inquiry.
-                        </p>
-
-                        <p style={{ marginBottom: '1.1rem' }}>
-                            They do not announce themselves. Approach them. Proximity is the only interface.
-                        </p>
-
-                        <p style={{ opacity: 0.75 }}>
-                            The system succeeds when you no longer need the map.
-                        </p>
+                        The mirrors are already inside you. The field reminds you of them.
                     </div>
                 </div>
 
@@ -274,7 +244,7 @@ export function LoadingScreen() {
                             {gpuError ? (
                                 <span style={{ letterSpacing: '2px' }}>SYSTEM INCOMPATIBLE</span>
                             ) : isReadyToStart ? (
-                                "[ ENTER FIELD ]"
+                                "ENTER"
                             ) : (
                                 <span>
                                     {active ? "ASSEMBLING" : "CALIBRATING"}… {displayProgress}%
@@ -290,34 +260,22 @@ export function LoadingScreen() {
                         </div>
                     </div>
 
-                    {/* Bottom Area: Controls */}
-                    <div style={{
-                        marginTop: isMobileLandscape ? '20px' : '48px',
-                        color: 'var(--noesis-silver)', opacity: 0.85, animation: 'fadeIn 3s ease',
-                        userSelect: 'none', display: 'flex', justifyContent: 'center', gap: '24px',
-                        flexDirection: 'row',
-                        fontFamily: 'var(--noesis-font-mono)',
-                    }}>
-                        {gpuError ? (
-                            <div style={{ fontSize: '0.8rem', maxWidth: '400px', lineHeight: '1.4', textAlign: 'center' }}>
-                                <p style={{ margin: 0, fontWeight: 'bold', fontSize: '0.7rem' }}>ERROR CODE: {gpuError}</p>
-                            </div>
-                        ) : (
-                            isMobile ? (
-                                <>
-                                    <InstructionRow input={<Key>L-STICK</Key>} label="MOVE" />
-                                    <InstructionRow input={<Key>TOUCH</Key>} label="LOOK" />
-                                </>
-                            ) : (
-                                <>
-                                    <InstructionRow input={<><Key>W</Key><Key>A</Key><Key>S</Key><Key>D</Key></>} label="MOVE" />
-                                    <InstructionRow input={<Key>SHIFT</Key>} label="RUN" />
-                                    <InstructionRow input={<Key>C</Key>} label="CAM" />
-                                    <InstructionRow input={<MouseIcon />} label="LOOK" />
-                                </>
-                            )
-                        )}
-                    </div>
+                    {/* Fix E — InstructionRow control list removed. HUD chip strip
+                        at bottom-6 takes over once the user clicks ENTER (Fix A
+                        gates HUD's strip on isGameStarted, so there's no overlap).
+                        Only the GPU-error fallback survives here. */}
+                    {gpuError && (
+                        <div style={{
+                            marginTop: isMobileLandscape ? '20px' : '48px',
+                            color: 'var(--noesis-silver)', opacity: 0.85,
+                            userSelect: 'none', textAlign: 'center',
+                            fontFamily: 'var(--noesis-font-mono)',
+                        }}>
+                            <p style={{ margin: 0, fontWeight: 'bold', fontSize: '0.7rem' }}>
+                                ERROR CODE: {gpuError}
+                            </p>
+                        </div>
+                    )}
                 </div>
 
             </div>
