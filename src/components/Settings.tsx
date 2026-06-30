@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo } from 'react';
 import { useGameStore, type Quality } from '../core/store/gameStore';
 import { useAudioStore } from '../core/store/audioStore';
 
-const APP_VERSION = '0.1.0';
+const APP_VERSION = '0.1.1 · Calliope';
 
 const KEY_BINDINGS: ReadonlyArray<{ key: string; label: string }> = [
   { key: 'W A S D', label: 'Walk through the field' },
@@ -36,6 +36,9 @@ export default function Settings() {
 
   const reducedMotionPref = useGameStore((s) => s.reducedMotionPref);
   const setReducedMotionPref = useGameStore((s) => s.setReducedMotionPref);
+
+  const genderPreference = useGameStore((s) => s.genderPreference);
+  const setGenderPreference = useGameStore((s) => s.setGenderPreference);
 
   const masterVolume = useAudioStore((s) => s.masterVolume);
   const setMasterVolume = useAudioStore((s) => s.setMasterVolume);
@@ -73,6 +76,13 @@ export default function Settings() {
     [setReducedMotionPref],
   );
 
+  const onGenderChange = useCallback(
+    (event: React.ChangeEvent<HTMLSelectElement>) => {
+      setGenderPreference(event.target.value as 'auto' | 'male' | 'female');
+    },
+    [setGenderPreference],
+  );
+
   const onVolume = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
       setMasterVolume(Number(event.target.value));
@@ -98,10 +108,18 @@ export default function Settings() {
     <aside
       role="dialog"
       aria-label="Settings"
-      className="pointer-events-auto fixed top-0 right-0 z-50 h-full w-96 max-w-[92vw] overflow-y-auto border-l border-noesis-gold/40 bg-noesis-surface text-noesis-parchment"
+      className="pointer-events-auto fixed top-0 right-0 z-50 h-full w-96 max-w-[92vw] overflow-y-auto border-l border-noesis-gold/40 bg-[#0E1428] text-noesis-parchment"
     >
-      <div className="flex items-center justify-between border-b border-noesis-gold/30 px-6 py-4">
-        <h2 className="font-display text-xl tracking-[0.3em] text-noesis-gold">
+      {/* Fix B — Sacred-Gold corner brackets per bento module 6, matching the
+          Pause + Help modal frame. Anchored to the drawer's visible inner
+          rectangle (top-left, top-right, bottom-left, bottom-right). */}
+      <span aria-hidden className="pointer-events-none absolute top-0 left-0 h-3 w-3 border-t border-l border-noesis-gold" />
+      <span aria-hidden className="pointer-events-none absolute top-0 right-0 h-3 w-3 border-t border-r border-noesis-gold" />
+      <span aria-hidden className="pointer-events-none absolute bottom-0 left-0 h-3 w-3 border-b border-l border-noesis-gold" />
+      <span aria-hidden className="pointer-events-none absolute bottom-0 right-0 h-3 w-3 border-b border-r border-noesis-gold" />
+
+      <div className="flex items-center justify-between border-b border-noesis-silver/30 px-8 py-4">
+        <h2 className="font-display text-xl tracking-[0.4em] text-noesis-gold">
           SETTINGS
         </h2>
         <button
@@ -114,7 +132,28 @@ export default function Settings() {
         </button>
       </div>
 
-      <div className="space-y-8 px-6 py-6">
+      <div className="space-y-8 px-8 py-6">
+        {/* Fix A — Avatar gender choice. 'Auto' uses WorldConfig.gender from
+            the depth-reading report; explicit picks override. Persisted via
+            gameStore. */}
+        <section>
+          <h3 className="mb-3 font-sans text-[10px] font-medium uppercase tracking-[0.3em] text-noesis-gold/80">
+            Profile
+          </h3>
+          <label className="flex items-center justify-between gap-4 font-sans text-xs uppercase tracking-[0.2em]">
+            <span className="text-noesis-parchment/70">Avatar</span>
+            <select
+              value={genderPreference}
+              onChange={onGenderChange}
+              className="border border-noesis-gold/40 bg-noesis-void px-2 py-1 font-sans text-xs uppercase tracking-[0.2em] text-noesis-parchment focus:border-noesis-gold focus:outline-none"
+            >
+              <option value="auto">Auto (from report)</option>
+              <option value="male">Male Plumber</option>
+              <option value="female">Female Plumber</option>
+            </select>
+          </label>
+        </section>
+
         {/* ===== Display ===== */}
         <section>
           <h3 className="mb-3 font-mono text-[10px] uppercase tracking-[0.3em] text-noesis-gold/80">

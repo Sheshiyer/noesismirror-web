@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import type { Beacon } from '../types/world';
@@ -36,8 +37,54 @@ function decodeEmailFromToken(token: string | null): string | null {
   }
 }
 
+// Navigation UI per brand: Satoshi (font-sans), not mono. Mono is reserved
+// for biometric data, timestamps, engine output. Keys are UI affordances.
 const CHIP_CLASSES =
-  'border border-noesis-gold/40 bg-noesis-void/60 px-2 py-1 font-mono uppercase tracking-[0.25em] text-[10px] text-noesis-parchment/80';
+  'border border-noesis-gold/40 bg-noesis-void/60 px-2.5 py-1 font-sans uppercase tracking-[0.3em] text-[11px] font-medium text-noesis-parchment/80';
+
+/**
+ * Fix F — Brand-aligned modal frame per bento module 6.
+ *
+ * Outer 1px Sacred Gold hairline, Deep Surface body, Panchang header bar
+ * separated by a hairline Muted Silver divider, geometric corner brackets at
+ * each corner. Reusable for pause / help / settings / completion modals.
+ */
+function NoesisModalFrame({
+  title,
+  children,
+  footnote,
+}: {
+  title: string;
+  children: ReactNode;
+  footnote?: string;
+}) {
+  return (
+    <div className="relative w-[28rem] max-w-[90vw] border border-noesis-gold/40 bg-[#0E1428]">
+      {/* Corner brackets — sacred geometry marks at each corner */}
+      <span aria-hidden className="pointer-events-none absolute -top-px -left-px h-3 w-3 border-t border-l border-noesis-gold" />
+      <span aria-hidden className="pointer-events-none absolute -top-px -right-px h-3 w-3 border-t border-r border-noesis-gold" />
+      <span aria-hidden className="pointer-events-none absolute -bottom-px -left-px h-3 w-3 border-b border-l border-noesis-gold" />
+      <span aria-hidden className="pointer-events-none absolute -bottom-px -right-px h-3 w-3 border-b border-r border-noesis-gold" />
+
+      {/* Header bar */}
+      <div className="border-b border-noesis-silver/30 px-8 py-4">
+        <h2 className="font-display text-xl tracking-[0.4em] text-noesis-gold">
+          {title}
+        </h2>
+      </div>
+
+      {/* Body */}
+      <div className="px-8 py-6">{children}</div>
+
+      {/* Footer */}
+      {footnote && (
+        <div className="border-t border-noesis-silver/30 px-8 py-3 text-center font-mono text-[10px] uppercase tracking-[0.3em] text-noesis-parchment/40">
+          {footnote}
+        </div>
+      )}
+    </div>
+  );
+}
 
 const KEYBOARD_KEYS = ['WASD', 'SHIFT', 'G', 'ESC'] as const;
 
@@ -99,6 +146,9 @@ export default function HUD({ personId, personName, beacons }: HUDProps) {
   const hudVisible = useGameStore((s) => s.hudVisible);
   const setHudVisible = useGameStore((s) => s.setHudVisible);
   const characterRef = useGameStore((s) => s.characterRef);
+  // Fix A — gate the persistent chip strip on loading-complete so LoadingScreen
+  // doesn't show two pools of controls simultaneously.
+  const isGameStarted = useGameStore((s) => s.isGameStarted);
 
   const quality = useGameStore((s) => s.quality);
   const setQuality = useGameStore((s) => s.setQuality);
@@ -579,28 +629,33 @@ export default function HUD({ personId, personName, beacons }: HUDProps) {
         </aside>
       )}
 
-      {/* TP8-028 — Faint field-name banner top-center */}
+      {/* Fix B — Field-name banner repositioned to bottom-left (game-style HUD).
+          Was top-6 left-1/2 — collided with compass at top-16. */}
       {bannerVisible && (
         <div
-          className="pointer-events-none absolute top-6 left-1/2 -translate-x-1/2 font-display text-2xl tracking-[0.5em] text-noesis-parchment/30 transition-opacity duration-700"
+          className="pointer-events-none absolute bottom-6 left-6 font-display text-2xl tracking-[0.5em] text-noesis-parchment/30 transition-opacity duration-700"
           aria-hidden="true"
         >
           {fieldLabel}'S FIELD
         </div>
       )}
 
-      {/* TP8-003 — Keyboard chip strip bottom-center */}
-      <div className="pointer-events-none absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2">
-        {KEYBOARD_KEYS.map((k) => (
-          <span key={k} className={CHIP_CLASSES}>
-            {k}
-          </span>
-        ))}
-      </div>
+      {/* Fix A — Keyboard chip strip gated on isGameStarted so it doesn't leak
+          through the LoadingScreen overlay. Strip lives bottom-center as before. */}
+      {isGameStarted && (
+        <div className="pointer-events-none absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2">
+          {KEYBOARD_KEYS.map((k) => (
+            <span key={k} className={CHIP_CLASSES}>
+              {k}
+            </span>
+          ))}
+        </div>
+      )}
 
-      {/* TP8-008 — FPS counter bottom-left */}
+      {/* Fix B — FPS counter moved to top-right to free up bottom-left for
+          the field-name banner. Mirrors the bottom-right progress chip. */}
       {showFps && (
-        <div className="pointer-events-none absolute bottom-6 left-6 font-mono text-xs text-noesis-parchment/40">
+        <div className="pointer-events-none absolute top-6 right-6 font-mono text-xs text-noesis-parchment/40">
           {fps} FPS
         </div>
       )}
@@ -629,42 +684,38 @@ export default function HUD({ personId, personName, beacons }: HUDProps) {
         </div>
       )}
 
-      {/* TP8-011 — Pause overlay */}
+      {/* Fix F — Pause overlay: sacred-geometry frame per bento module 6.
+          Outer 1px Sacred Gold border, Deep Surface body, Panchang header
+          bar, hairline Muted Silver divider, geometric corner brackets. */}
       {paused && (
         <div
           className="pointer-events-auto fixed inset-0 z-30 grid place-items-center bg-noesis-void/80"
           role="dialog"
           aria-label="Paused"
         >
-          <div className="flex flex-col items-center gap-4">
-            <h2 className="font-display text-5xl tracking-[0.4em] text-noesis-gold">
-              PAUSED
-            </h2>
-            <p className="font-mono text-xs uppercase tracking-[0.3em] text-noesis-parchment/60">
-              press P or ESC to resume
+          <NoesisModalFrame title="PAUSED" footnote="press P or ESC to resume">
+            <p className="font-sans text-sm leading-relaxed text-noesis-parchment/70">
+              The field rests when you do. Nothing decays in your absence.
             </p>
-          </div>
+          </NoesisModalFrame>
         </div>
       )}
 
-      {/* TP8-012 — Keyboard help modal */}
+      {/* Fix F — Keyboard help modal: same sacred-geometry frame. */}
       {helpOpen && (
         <div
           className="pointer-events-auto fixed inset-0 z-30 grid place-items-center bg-noesis-void/80"
           role="dialog"
           aria-label="Keyboard help"
         >
-          <div className="w-[28rem] max-w-[90vw] border border-noesis-gold/40 bg-noesis-void/90 p-8">
-            <h2 className="mb-6 font-display text-2xl tracking-[0.3em] text-noesis-gold">
-              CONTROLS
-            </h2>
+          <NoesisModalFrame title="CONTROLS" footnote="press H or ESC to close">
             <ul className="space-y-3">
               {HELP_ROWS.map((row) => (
                 <li
                   key={row.key}
-                  className="flex items-center justify-between gap-4 font-mono text-xs uppercase tracking-[0.2em] text-noesis-parchment/80"
+                  className="flex items-center justify-between gap-4 font-sans text-xs uppercase tracking-[0.2em] text-noesis-parchment/80"
                 >
-                  <span className="border border-noesis-gold/40 bg-noesis-void/60 px-2 py-1 text-noesis-gold">
+                  <span className="border border-noesis-gold/40 bg-noesis-void/60 px-2 py-1 font-mono text-noesis-gold">
                     {row.key}
                   </span>
                   <span className="text-right text-noesis-parchment/70">
@@ -673,10 +724,7 @@ export default function HUD({ personId, personName, beacons }: HUDProps) {
                 </li>
               ))}
             </ul>
-            <p className="mt-6 text-center font-mono text-[10px] uppercase tracking-[0.3em] text-noesis-parchment/40">
-              press H or ESC to close
-            </p>
-          </div>
+          </NoesisModalFrame>
         </div>
       )}
 

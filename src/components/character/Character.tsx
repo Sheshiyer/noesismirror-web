@@ -9,7 +9,7 @@ import { useCharacterPhysics } from './hooks/useCharacterPhysics';
 import { useGameStore, CameraMode } from '../../core/store/gameStore';
 import { CharacterAudio, CharacterAudioHandle } from './CharacterAudio';
 
-export const Character = ({ position = [0, 0, 0], scale = 1, visible = true }: CharacterProps) => {
+export const Character = ({ position = [0, 0, 0], scale = 1, visible = true, worldGender }: CharacterProps) => {
   const groupRef = useRef<Group>(null);
   const audioRef = useRef<CharacterAudioHandle>(null);
 
@@ -22,7 +22,7 @@ export const Character = ({ position = [0, 0, 0], scale = 1, visible = true }: C
   const uVelocity = useMemo(() => uniform(new THREE.Vector3(0, 0, 0)), []);
 
   const setCharacterRef = useGameStore((state) => state.setCharacterRef);
-  const { scene, animations, helmets } = useCharacterAssets(uWorldPos);
+  const { scene, animations, helmets } = useCharacterAssets(uWorldPos, worldGender);
 
   // Get camera mode from store
   const cameraMode = useGameStore((state) => state.cameraMode);

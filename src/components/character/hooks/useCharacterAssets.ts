@@ -6,7 +6,14 @@ import * as THREE from 'three/webgpu';
 import { Fn, vec3, vec4, float, positionLocal, modelWorldMatrix, cameraViewMatrix, cameraProjectionMatrix, oneMinus, texture, uv } from 'three/tsl';
 import { getTerrainHeight } from '../../../core/shaders/terrainHelpers';
 import { uTerrainAmp, uTerrainFreq, uTerrainSeed } from '../../../core/shaders/uniforms';
-import { BODY_MESH_NAMES, BODY_TEXTURE_PATHS, DETAIL_TEXTURE_PATHS, MODEL_PATHS } from '../config';
+import {
+  AVATAR_PROFILES,
+  BODY_MESH_NAMES,
+  BODY_TEXTURE_PATHS,
+  DETAIL_TEXTURE_PATHS,
+  resolveAvatarProfileId,
+} from '../config';
+import { useGameStore } from '../../../core/store/gameStore';
 import { useKTX2Texture } from '@core';
 
 const configureTextures = (textures: any) => {
@@ -29,8 +36,17 @@ const extractClip = (gltf: any, name: string): THREE.AnimationClip | null => {
   return clip;
 };
 
-export function useCharacterAssets(uWorldPos?: any) {
-  const [meshData, idleAnim, walkAnim, runAnim, backAnim] = useGLTF(MODEL_PATHS);
+export function useCharacterAssets(
+  uWorldPos?: any,
+  worldGender?: 'male' | 'female' | 'androgynous',
+) {
+  // Resolve active profile from settings override + world report hint.
+  // Settings preference wins; falls back to worldGender; defaults to male.
+  const genderPreference = useGameStore((s) => s.genderPreference);
+  const profileId = resolveAvatarProfileId(worldGender, genderPreference);
+  const ACTIVE_PROFILE = AVATAR_PROFILES[profileId];
+
+  const [meshData, idleAnim, walkAnim, runAnim, backAnim] = useGLTF(ACTIVE_PROFILE.modelPaths);
 
   const mesh = meshData.scene;
 
@@ -54,47 +70,68 @@ export function useCharacterAssets(uWorldPos?: any) {
     })();
 
     // --- Material Setup ---
-    const bodyMat = new THREE.MeshStandardNodeMaterial({
-      map: bodyTex.map,
-      aoMap: bodyTex.aoMap,
-      normalMap: bodyTex.normalMap,
-      metalnessMap: bodyTex.metalnessMap,
-      metalness: 1,
-    });
-    bodyMat.roughnessNode = Fn(() => oneMinus(texture(bodyTex.metalnessMap, uv())))();
-    bodyMat.vertexNode = vertexNode;
-
-    const detailMat = new THREE.MeshStandardNodeMaterial({
-      map: detailTex.map,
-      aoMap: detailTex.aoMap,
-      normalMap: detailTex.normalMap,
-      metalnessMap: detailTex.metalnessMap,
-      metalness: 1,
-    })
-
-    detailMat.roughnessNode = Fn(() => oneMinus(texture(detailTex.metalnessMap, uv())))();
-    detailMat.vertexNode = vertexNode;
-
-    // Assign materials based on mesh names and store all helmet references
     const helmets: THREE.Mesh[] = [];
 
-    clonedScene.traverse((child) => {
-      if (child instanceof THREE.Mesh) {
-        child.frustumCulled = false;
+    if (ACTIVE_PROFILE.useExternalMaterials) {
+      // Astronaut path: assemble materials from external KTX2 maps, assign by mesh name.
+      const bodyMat = new THREE.MeshStandardNodeMaterial({
+        map: bodyTex.map,
+        aoMap: bodyTex.aoMap,
+        normalMap: bodyTex.normalMap,
+        metalnessMap: bodyTex.metalnessMap,
+        metalness: 1,
+      });
+      bodyMat.roughnessNode = Fn(() => oneMinus(texture(bodyTex.metalnessMap, uv())))();
+      bodyMat.vertexNode = vertexNode;
 
-        if (BODY_MESH_NAMES.includes(child.name)) {
-          child.material = bodyMat;
-        } else if (child.name.includes('Helmet')) {
-          child.material = detailMat;
-          child.visible = true;
-          helmets.push(child);
-        } else if (!child.name.includes('Person')) {
-          child.material = detailMat;
-        } else {
-          child.visible = false;
+      const detailMat = new THREE.MeshStandardNodeMaterial({
+        map: detailTex.map,
+        aoMap: detailTex.aoMap,
+        normalMap: detailTex.normalMap,
+        metalnessMap: detailTex.metalnessMap,
+        metalness: 1,
+      });
+      detailMat.roughnessNode = Fn(() => oneMinus(texture(detailTex.metalnessMap, uv())))();
+      detailMat.vertexNode = vertexNode;
+
+      clonedScene.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          child.frustumCulled = false;
+
+          if (BODY_MESH_NAMES.includes(child.name)) {
+            child.material = bodyMat;
+          } else if (child.name.includes('Helmet')) {
+            child.material = detailMat;
+            child.visible = true;
+            helmets.push(child);
+          } else if (!child.name.includes('Person')) {
+            child.material = detailMat;
+          } else {
+            child.visible = false;
+          }
         }
-      }
-    });
+      });
+    } else {
+      // Custom (Meshy) path: re-wrap the GLTF's embedded PBR materials as NodeMaterial
+      // so the terrain-displacement vertexNode still applies. No mesh-name matching needed.
+      clonedScene.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          child.frustumCulled = false;
+          const orig = child.material as THREE.MeshStandardMaterial;
+          const newMat = new THREE.MeshStandardNodeMaterial({
+            map: orig.map ?? null,
+            normalMap: orig.normalMap ?? null,
+            metalnessMap: orig.metalnessMap ?? null,
+            roughnessMap: orig.roughnessMap ?? null,
+            aoMap: orig.aoMap ?? null,
+            metalness: orig.metalness ?? 1,
+            roughness: orig.roughness ?? 1,
+          });
+          newMat.vertexNode = vertexNode;
+          child.material = newMat;
+        }
+      });
+    }
 
     // --- Animations Setup ---
     const animConfig = [

@@ -13,7 +13,9 @@ import { UI } from "../ui/UI";
 import { preloadVATAssets } from "../components/Rose/core";
 import { WorldController } from "../components/WorldController";
 import { NorthStar, CharacterShadow } from "../components/background/Background";
-import { HorizonHalo } from "../components/background/HorizonHalo";
+// HorizonHalo intentionally not rendered (see scene mount below). Leaving the
+// import out so the bundler tree-shakes the module entirely.
+// import { HorizonHalo } from "../components/background/HorizonHalo";
 import { createContext } from "react";
 import * as THREE from "three/webgpu";
 import { KeyboardMapper } from "@core";
@@ -93,8 +95,14 @@ export default function App({ config }: AppProps) {
         toggleCameraMode();
     });
 
+    // Fix G — Hide Leva while the LoadingScreen overlay is up. Same gate the
+    // HUD chip strip uses (isGameStarted from gameStore).
+    const isGameStarted = useGameStore((s) => s.isGameStarted);
+
     return <>
-        <LevaWrapper collapsed={true} initialHidden={true} />
+        {/* Leva visible once the world is mounted. Press `h` to hide manually.
+            Hidden during loading so its panel doesn't leak through the overlay. */}
+        {isGameStarted && <LevaWrapper collapsed={true} initialHidden={false} />}
         <DeviceDetector />
         <UI />
         <KeyboardMapper input={input} keyMap={keyBindings} />
@@ -171,8 +179,11 @@ export default function App({ config }: AppProps) {
                         <DirectionalLight />
                         {/* TP2-005: North star above spawn */}
                         <NorthStar />
-                        {/* TP2-001: Coherence-Emerald horizon halo */}
-                        <HorizonHalo />
+                        {/* TP2-001: Coherence-Emerald horizon halo —
+                            removed by request: the 86-94m ring was reading as
+                            a hard world-boundary line. The starfield + grass
+                            falloff already carry the horizon mood without it. */}
+                        {/* <HorizonHalo /> */}
                         {/* TP2-007: Emerald contact shadow under character */}
                         <CharacterShadow />
                         <Effects />

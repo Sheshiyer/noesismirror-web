@@ -6,6 +6,11 @@ import * as THREE from 'three/webgpu';
 import { Beacon as BeaconType } from '../types/world';
 import { useVisitedStore } from '../core/store/visitedStore';
 import { useGameStore } from '../core/store/gameStore';
+// Fix H — Meshy-baked beacon artifact loaded per section, painted with the
+// brand-aligned BeaconMaterial. Replaces the placeholder TypeShape inside
+// the existing AOE shell + ring stack.
+import { BeaconArtifact } from './beacon/BeaconArtifact';
+import { resolveSectionId, getBeaconColorHex } from './beacon/sectionColors';
 
 export type BeaconMarkerState = 'dormant' | 'approachable' | 'active';
 
@@ -95,8 +100,10 @@ const AOE_FRAGMENT_SHADER = /* glsl */ `
   }
 `;
 
-// TP3-006 — beacons levitate 0.3m above ground (base hover height).
-const BASE_Y = 0.3;
+// TP3-006 / Fix H.6 — beacons levitate above the grass canopy. Grass
+// bladeHeightMax = 0.8m (see grass/core/grassControls.ts). 1.6m hover gives
+// the GLB artifact clear sky behind it from any approach angle.
+const BASE_Y = 1.6;
 // TP3-025 — character collision push-back radius.
 const COLLISION_RADIUS = 0.5;
 
@@ -175,8 +182,10 @@ export function Beacon({ beacon, state, distance = Infinity, personId, onClick }
     const ring = ringRef.current;
     if (!group || !meshGroup) return;
 
-    // TP3-006 — suspended position. Subtle sine float around BASE_Y.
-    const float = Math.sin(t * 1.2) * 0.05;
+    // TP3-006 / Fix H.6 — suspended position. Sine float around BASE_Y.
+    // Bob amplitude raised from 5cm to 15cm for more presence at the new
+    // 1.6m hover height. Period kept at ~5s for the same meditative cadence.
+    const float = Math.sin(t * 1.2) * 0.15;
     group.position.y = BASE_Y + float;
 
     // TP3-013 — look-at character (only yaw — keep beacon upright).
@@ -385,9 +394,42 @@ export function Beacon({ beacon, state, distance = Infinity, personId, onClick }
           onClick={handleClick}
         >
           <group ref={innerMeshRef}>
-            <TypeShape type={beacon.type} typeColor={typeColor} color={color} state={state} />
+            {/* Fix H — Meshy-baked section artifact painted with BeaconMaterial.
+                Sits inside the existing AOE shell + ring (untouched). The
+                TypeShape placeholder is removed in favor of the brand-aligned
+                sacred-geometry GLB per section. */}
+            <BeaconArtifact
+              beaconId={beacon.id}
+              order={beacon.order}
+              state={state}
+            />
           </group>
         </group>
+
+        {/* Fix D — Dev/debug overlay: show resolved section id + color hex
+            above each beacon when Game.Dev → "Beacon labels" is toggled on.
+            Helps verify the section→color mapping at a glance. */}
+        {useGameStore((s) => s.showBeaconDebug) && (() => {
+          const sectionId = resolveSectionId(beacon.id, beacon.order);
+          const hex = getBeaconColorHex(beacon.id, beacon.order);
+          return (
+            <group position={[0, 2.4, 0]}>
+              <Html center transform={false}>
+                <div
+                  className="font-mono uppercase text-[10px] tracking-[0.2em] border bg-noesis-void/85 backdrop-blur-sm px-2 py-1"
+                  style={{
+                    borderColor: hex,
+                    color: hex,
+                    pointerEvents: 'none',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {sectionId} · {hex}
+                </div>
+              </Html>
+            </group>
+          );
+        })()}
 
         {/* Floating label — proximity-faded; invisible from afar.
             TP3-015: font-display (Panchang).
@@ -460,223 +502,13 @@ export function Beacon({ beacon, state, distance = Infinity, personId, onClick }
   );
 }
 
+
 // ============================================================================
-// TP3-001 — type-specific geometry.
-// Each variant returns a small group sized roughly within a 1m bounding box.
-// Materials are MeshStandardMaterial so the parent useFrame loop can drive
-// emissive intensity uniformly across all beacons.
+// Fix H — Dead-code removal.
+//
+// The TypeShape dispatcher + Audio/Video/Reading/Slides/Study/Default subcomponents
+// that previously rendered placeholder-colored primitives per beacon type have
+// been removed. They were replaced by the Meshy-baked sacred-geometry GLBs
+// loaded via BeaconArtifact (src/components/beacon/BeaconArtifact.tsx). Git
+// history preserves them if a per-type fallback is ever needed again.
 // ============================================================================
-
-interface TypeShapeProps {
-  type: string;
-  typeColor: THREE.Color;
-  color: THREE.Color;
-  state: BeaconMarkerState;
-}
-
-function TypeShape({ type, typeColor, color, state }: TypeShapeProps) {
-  // Common emissive baseline; useFrame in parent overwrites per tick anyway.
-  const emissiveIntensity = EMISSIVE_INTENSITY[state];
-
-  switch (type) {
-    case 'audio':
-      return <AudioShape typeColor={typeColor} color={color} emissiveIntensity={emissiveIntensity} />;
-    case 'video':
-      return <VideoShape typeColor={typeColor} color={color} emissiveIntensity={emissiveIntensity} />;
-    case 'reading':
-      return <ReadingShape typeColor={typeColor} color={color} emissiveIntensity={emissiveIntensity} />;
-    case 'slides':
-      return <SlidesShape typeColor={typeColor} color={color} emissiveIntensity={emissiveIntensity} />;
-    case 'study':
-      return <StudyShape typeColor={typeColor} color={color} emissiveIntensity={emissiveIntensity} />;
-    default:
-      return <DefaultShape typeColor={typeColor} color={color} emissiveIntensity={emissiveIntensity} />;
-  }
-}
-
-interface ShapeProps {
-  typeColor: THREE.Color;
-  color: THREE.Color;
-  emissiveIntensity: number;
-}
-
-// audio: oscillating sphere (the subtle 1.0-1.05 wobble is driven below).
-function AudioShape({ typeColor, color, emissiveIntensity }: ShapeProps) {
-  const sphereRef = useRef<Mesh>(null);
-  useFrame(({ clock }) => {
-    if (!sphereRef.current) return;
-    const wobble = 1 + 0.025 + 0.025 * Math.sin(clock.getElapsedTime() * 3);
-    sphereRef.current.scale.setScalar(wobble);
-  });
-  return (
-    <>
-      <mesh ref={sphereRef}>
-        <sphereGeometry args={[0.45, 24, 24]} />
-        <meshStandardMaterial
-          color={new THREE.Color('#1e293b')}
-          emissive={color}
-          emissiveIntensity={emissiveIntensity}
-          roughness={0.2}
-          metalness={0.5}
-          transparent
-          opacity={0.85}
-        />
-      </mesh>
-      <mesh>
-        <sphereGeometry args={[0.22, 16, 16]} />
-        <meshBasicMaterial color={typeColor} transparent opacity={0.85} />
-      </mesh>
-    </>
-  );
-}
-
-// video: a flat film panel.
-function VideoShape({ typeColor, color, emissiveIntensity }: ShapeProps) {
-  return (
-    <>
-      <mesh>
-        <boxGeometry args={[1.2, 0.7, 0.05]} />
-        <meshStandardMaterial
-          color={new THREE.Color('#1e293b')}
-          emissive={color}
-          emissiveIntensity={emissiveIntensity}
-          roughness={0.25}
-          metalness={0.55}
-          transparent
-          opacity={0.9}
-        />
-      </mesh>
-      {/* Inner screen glow */}
-      <mesh position={[0, 0, 0.03]}>
-        <planeGeometry args={[1.05, 0.55]} />
-        <meshBasicMaterial color={typeColor} transparent opacity={0.55} />
-      </mesh>
-    </>
-  );
-}
-
-// reading: an open book — two hinged planes.
-function ReadingShape({ typeColor, color, emissiveIntensity }: ShapeProps) {
-  return (
-    <group>
-      <mesh position={[-0.32, 0, 0]} rotation={[0, 0.35, 0]}>
-        <planeGeometry args={[0.6, 0.8]} />
-        <meshStandardMaterial
-          color={new THREE.Color('#1e293b')}
-          emissive={color}
-          emissiveIntensity={emissiveIntensity}
-          roughness={0.45}
-          metalness={0.2}
-          side={THREE.DoubleSide}
-          transparent
-          opacity={0.92}
-        />
-      </mesh>
-      <mesh position={[0.32, 0, 0]} rotation={[0, -0.35, 0]}>
-        <planeGeometry args={[0.6, 0.8]} />
-        <meshStandardMaterial
-          color={new THREE.Color('#1e293b')}
-          emissive={color}
-          emissiveIntensity={emissiveIntensity}
-          roughness={0.45}
-          metalness={0.2}
-          side={THREE.DoubleSide}
-          transparent
-          opacity={0.92}
-        />
-      </mesh>
-      {/* spine accent */}
-      <mesh position={[0, 0, 0.02]}>
-        <boxGeometry args={[0.04, 0.8, 0.04]} />
-        <meshBasicMaterial color={typeColor} transparent opacity={0.7} />
-      </mesh>
-    </group>
-  );
-}
-
-// slides: 3 stacked plates with Y stack and small Z offset.
-function SlidesShape({ typeColor, color, emissiveIntensity }: ShapeProps) {
-  const slates = [-0.18, 0, 0.18];
-  return (
-    <group>
-      {slates.map((y, i) => (
-        <mesh key={i} position={[0, y, i * 0.04 - 0.04]}>
-          <boxGeometry args={[1.0, 0.12, 0.05]} />
-          <meshStandardMaterial
-            color={new THREE.Color('#1e293b')}
-            emissive={color}
-            emissiveIntensity={emissiveIntensity}
-            roughness={0.3}
-            metalness={0.5}
-            transparent
-            opacity={0.9}
-          />
-        </mesh>
-      ))}
-      {/* top accent edge */}
-      <mesh position={[0, 0.26, 0]}>
-        <boxGeometry args={[1.0, 0.01, 0.05]} />
-        <meshBasicMaterial color={typeColor} transparent opacity={0.85} />
-      </mesh>
-    </group>
-  );
-}
-
-// study: a 5-node tetrahedron-ish cluster.
-function StudyShape({ typeColor, color, emissiveIntensity }: ShapeProps) {
-  // tetrahedron vertices + center, scaled to fit ~1m bbox.
-  const nodes: [number, number, number][] = [
-    [0, 0.35, 0],
-    [0.35, -0.2, 0.2],
-    [-0.35, -0.2, 0.2],
-    [0, -0.2, -0.4],
-    [0, 0.05, 0], // center
-  ];
-  return (
-    <group>
-      {nodes.map((p, i) => (
-        <mesh key={i} position={p}>
-          <sphereGeometry args={[0.12, 12, 12]} />
-          <meshStandardMaterial
-            color={new THREE.Color('#1e293b')}
-            emissive={color}
-            emissiveIntensity={emissiveIntensity}
-            roughness={0.2}
-            metalness={0.55}
-            transparent
-            opacity={0.9}
-          />
-        </mesh>
-      ))}
-      {/* center accent */}
-      <mesh position={[0, 0.05, 0]}>
-        <sphereGeometry args={[0.07, 12, 12]} />
-        <meshBasicMaterial color={typeColor} transparent opacity={0.95} />
-      </mesh>
-    </group>
-  );
-}
-
-// fallback — original octahedron shell.
-function DefaultShape({ typeColor, color, emissiveIntensity }: ShapeProps) {
-  return (
-    <>
-      <mesh>
-        <octahedronGeometry args={[0.55, 0]} />
-        <meshStandardMaterial
-          color={new THREE.Color('#1e293b')}
-          emissive={color}
-          emissiveIntensity={emissiveIntensity}
-          roughness={0.15}
-          metalness={0.6}
-          transparent
-          opacity={0.85}
-        />
-      </mesh>
-      <mesh>
-        <octahedronGeometry args={[0.28, 1]} />
-        <meshBasicMaterial color={typeColor} transparent opacity={0.9} />
-      </mesh>
-    </>
-  );
-}

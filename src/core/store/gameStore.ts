@@ -81,6 +81,29 @@ interface GameState {
   // ===== HUD State (TP8) =====
   hudVisible: boolean;
   setHudVisible: (b: boolean) => void;
+
+  // ===== Avatar Gender Preference =====
+  // 'auto' = derive from WorldConfig.gender (which the depth-reading report
+  // populates), 'male'/'female' = explicit override. Persists across sessions.
+  genderPreference: 'auto' | 'male' | 'female';
+  setGenderPreference: (p: 'auto' | 'male' | 'female') => void;
+
+  // ===== Proximity-driven world tint =====
+  // The hex color of the beacon the player is currently approaching, or null
+  // when no beacon is in approach range. Rose petals (via uHueShift) and
+  // CosmicBeam glows (via uGlowColor) lerp toward this value each frame so
+  // the world's color register reflects which section the player is engaging.
+  currentBeaconColorHex: string | null;
+  // Pre-computed hue-shift delta toward the beacon color, for the Rose
+  // material's existing HSV-shift pipeline. 0 = no shift (default).
+  currentBeaconHueShift: number;
+  setCurrentBeaconColor: (hex: string | null, hueShift: number) => void;
+
+  // ===== Dev / debug toggles (transient, not persisted) =====
+  showPerf: boolean;
+  setShowPerf: (b: boolean) => void;
+  showBeaconDebug: boolean;
+  setShowBeaconDebug: (b: boolean) => void;
 }
 
 export type OnboardingPhase =
@@ -200,6 +223,24 @@ export const useGameStore = create<GameState>()(
       // ===== HUD State (TP8) =====
       hudVisible: true,
       setHudVisible: (b) => set({ hudVisible: b }),
+
+      // ===== Avatar Gender Preference =====
+      genderPreference: 'auto',
+      setGenderPreference: (p) => set({ genderPreference: p }),
+
+      // ===== Proximity-driven world tint =====
+      currentBeaconColorHex: null,
+      currentBeaconHueShift: 0,
+      setCurrentBeaconColor: (hex, hueShift) => set({
+        currentBeaconColorHex: hex,
+        currentBeaconHueShift: hueShift,
+      }),
+
+      // ===== Dev / debug toggles (transient) =====
+      showPerf: false,
+      setShowPerf: (b) => set({ showPerf: b }),
+      showBeaconDebug: false,
+      setShowBeaconDebug: (b) => set({ showBeaconDebug: b }),
     }),
     {
       name: 'noesis_game_prefs',
@@ -212,6 +253,7 @@ export const useGameStore = create<GameState>()(
         reducedMotionPref: state.reducedMotionPref,
         showFps: state.showFps,
         miniMapOpen: state.miniMapOpen,
+        genderPreference: state.genderPreference,
       }),
     }
   )

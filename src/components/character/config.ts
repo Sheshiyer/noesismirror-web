@@ -34,13 +34,91 @@ export const DETAIL_TEXTURE_PATHS = {
   normalMap: '/textures/Details/Astronaut_Suit_Details_Normals.ktx2',
 };
 
-export const MODEL_PATHS = [
-  '/models/Astronaut.glb',
-  '/models/Idle.glb',
-  '/models/Walking.glb',
-  '/models/Running.glb',
-  '/models/WalkingBack.glb',
-];
+// ============================================================================
+// Avatar profiles — three Plumber-family options + the original astronaut.
+// Resolution rule per design spec:
+//   1. genderPreference 'male'   → custom-male  (overrides report)
+//   2. genderPreference 'female' → custom-female (overrides report)
+//   3. genderPreference 'auto' + worldGender='female'      → custom-female
+//   4. genderPreference 'auto' + worldGender='male'/absent → custom-male
+//   5. genderPreference 'auto' + worldGender='androgynous' → custom-male (default)
+// Set AVATAR_PROFILE_FORCE = 'astronaut' for instant rollback to the
+// pre-Plumber state (skips the gender-resolution flow entirely).
+// ============================================================================
+
+export type AvatarProfileId = 'astronaut' | 'custom-male' | 'custom-female';
+
+export const AVATAR_PROFILES: Record<AvatarProfileId, {
+  modelPaths: string[];
+  useExternalMaterials: boolean;
+}> = {
+  astronaut: {
+    modelPaths: [
+      '/models/Astronaut.glb',
+      '/models/Idle.glb',
+      '/models/Walking.glb',
+      '/models/Running.glb',
+      '/models/WalkingBack.glb',
+    ],
+    useExternalMaterials: true,
+  },
+  'custom-male': {
+    modelPaths: [
+      '/models/avatar/Avatar.glb',
+      '/models/avatar/Idle.glb',
+      '/models/avatar/Walking.glb',
+      '/models/avatar/Running.glb',
+      '/models/avatar/WalkingBack.glb',
+    ],
+    useExternalMaterials: false,
+  },
+  'custom-female': {
+    modelPaths: [
+      '/models/avatar-female/Avatar.glb',
+      '/models/avatar-female/Idle.glb',
+      '/models/avatar-female/Walking.glb',
+      '/models/avatar-female/Running.glb',
+      '/models/avatar-female/WalkingBack.glb',
+    ],
+    useExternalMaterials: false,
+  },
+};
+
+/** Set to 'astronaut' to bypass the Plumber gender flow entirely. */
+export const AVATAR_PROFILE_FORCE: AvatarProfileId | null = null;
+
+/**
+ * Resolve which avatar profile is active given the user's preference and the
+ * world config's gender hint (from the depth-reading report).
+ */
+export function resolveAvatarProfileId(
+  worldGender: 'male' | 'female' | 'androgynous' | undefined,
+  settingPref: 'auto' | 'male' | 'female',
+): AvatarProfileId {
+  if (AVATAR_PROFILE_FORCE) return AVATAR_PROFILE_FORCE;
+  if (settingPref === 'male') return 'custom-male';
+  if (settingPref === 'female') return 'custom-female';
+  // 'auto' — defer to world gender
+  if (worldGender === 'female') return 'custom-female';
+  return 'custom-male';
+}
+
+// Module-level constant kept for backwards compatibility (App.tsx
+// useGLTF.preload still imports MODEL_PATHS). Preloads ALL three profile
+// path sets so the user can switch without a full asset re-fetch — extra
+// initial network but every profile lands instantly afterward.
+export const MODEL_PATHS: string[] = Array.from(
+  new Set([
+    ...AVATAR_PROFILES.astronaut.modelPaths,
+    ...AVATAR_PROFILES['custom-male'].modelPaths,
+    ...AVATAR_PROFILES['custom-female'].modelPaths,
+  ]),
+);
+
+// Backwards-compat re-exports for components that pinned to the legacy names.
+// Resolve to the male profile so the existing code path keeps working until
+// it migrates to resolveAvatarProfileId.
+export const ACTIVE_PROFILE = AVATAR_PROFILES['custom-male'];
 
 // ============================================================================
 // Types
@@ -50,6 +128,10 @@ export interface CharacterProps {
   position?: [number, number, number];
   scale?: number;
   visible?: boolean;
+  /** Optional gender hint from WorldConfig.gender (report-derived). Used by
+   *  useCharacterAssets to resolve the active avatar profile when the user's
+   *  Settings preference is 'auto'. */
+  worldGender?: 'male' | 'female' | 'androgynous';
 }
 
 export interface CharacterState {

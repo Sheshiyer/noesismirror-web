@@ -1,8 +1,12 @@
 // @ts-nocheck
 import * as THREE from 'three'
+import { MeshBasicNodeMaterial } from 'three/webgpu'
 import { useMemo, useEffect, useRef, memo } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
-import { texture, equirectUV, uniform, mx_rotate3d, vec3, positionWorld } from 'three/tsl'
+import {
+  texture, equirectUV, uniform, mx_rotate3d, vec3, positionWorld,
+  Fn, vec2, vec4, float, uv, length, smoothstep, sin, oneMinus, atan2
+} from 'three/tsl'
 import { useKTX2Texture } from '@core'
 import { CameraMode, useGameStore } from '../../core/store/gameStore'
 import { uTime } from '../../core/shaders/uniforms';
@@ -28,12 +32,20 @@ export function NorthStar() {
 }
 
 /**
- * TP2-007: Character contact shadow.
+ * TP2-007: Character aura (was: contact shadow).
  *
- * A small emerald disc that tracks the character's feet. Uses additive
- * blending so it reads as a soft glow rather than an occluder — Coherence-
- * Emerald is the player-presence color, so this also doubles as a "you are
- * here" beacon. Subscribes to gameStore.characterRef and updates each frame.
+ * Shader-driven Coherence-Emerald aura emanating from an invisible torus
+ * field around the avatar's feet. Replaces the previous flat disc with a
+ * TSL fragment shader that:
+ *   - Renders a radial torus profile (peak intensity at ~0.18 of plane radius,
+ *     soft fade inward and outward)
+ *   - Adds a subtle central bloom (always-present under-figure glow)
+ *   - Modulates with a slow breath pulse (sine on uTime)
+ *   - Adds a 6-fold rotational flow (circling-energy effect)
+ *
+ * Bioluminescent principle per brand guide: light originates from within the
+ * figure's field, not projected onto it. Additive blend reads as a glow, not
+ * an occluder. Subscribes to gameStore.characterRef and tracks each frame.
  */
 export function CharacterShadow() {
   const meshRef = useRef<THREE.Mesh>(null)
@@ -41,28 +53,55 @@ export function CharacterShadow() {
   const tmpVec = useMemo(() => new THREE.Vector3(), [])
 
   const material = useMemo(() => {
-    return new THREE.MeshBasicMaterial({
-      color: new THREE.Color('#10B5A7'),
+    const mat = new MeshBasicNodeMaterial({
       transparent: true,
-      opacity: 0.35,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
       side: THREE.DoubleSide,
       toneMapped: false,
     })
+
+    // Coherence-Emerald in linear-ish space — bright enough for additive blend
+    mat.colorNode = vec3(0.12, 0.85, 0.78)
+
+    mat.opacityNode = Fn(() => {
+      // Distance from plane center (0..~0.5 inside the plane bounds)
+      const d = length(uv().sub(vec2(0.5, 0.5)))
+
+      // Torus-field profile — tightened: peak ring at d=0.28, fading sharply
+      // outward by d=0.48. No central bloom (dropped — was overdriving the
+      // additive blend against the dark grass canopy and reading as a flat
+      // cyan disc). The aura is now a ring, not a halo.
+      const ringInner = smoothstep(float(0.18), float(0.28), d)
+      const ringOuter = oneMinus(smoothstep(float(0.28), float(0.48), d))
+      const ring = ringInner.mul(ringOuter)
+
+      // Breath pulse — slow sine on uTime, 0.9..1.0 amplitude
+      const pulse = sin(uTime.mul(float(0.6))).mul(float(0.05)).add(float(0.95))
+
+      // Rotational flow — 6-fold sine on polar angle, subtle
+      const angle = atan2(uv().y.sub(float(0.5)), uv().x.sub(float(0.5)))
+      const flow = sin(angle.mul(float(6.0)).add(uTime.mul(float(1.0)))).mul(float(0.06)).add(float(0.94))
+
+      // Final intensity dropped from 0.7 → 0.32 so the additive blend
+      // doesn't blow out against grass.
+      return ring.mul(pulse).mul(flow).mul(float(0.32))
+    })()
+
+    return mat
   }, [])
 
   useFrame(() => {
     if (!meshRef.current || !characterRef?.current) return
     characterRef.current.getWorldPosition(tmpVec)
     // Sit just above ground; terrain displaces upward, so a small offset
-    // keeps the disc from clipping into hills.
+    // keeps the aura from clipping into hills.
     meshRef.current.position.set(tmpVec.x, tmpVec.y + 0.03, tmpVec.z)
   })
 
   return (
     <mesh ref={meshRef} rotation={[-Math.PI / 2, 0, 0]} renderOrder={1}>
-      <circleGeometry args={[0.6, 32]} />
+      <planeGeometry args={[2.4, 2.4, 1, 1]} />
       <primitive object={material} attach="material" />
     </mesh>
   )
