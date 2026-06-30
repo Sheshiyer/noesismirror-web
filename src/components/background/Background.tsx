@@ -7,6 +7,26 @@ import { useKTX2Texture } from '@core'
 import { CameraMode, useGameStore } from '../../core/store/gameStore'
 import { uTime } from '../../core/shaders/uniforms';
 
+// TP2-005: North star - Sacred-Gold sprite directly above spawn
+export function NorthStar() {
+  const material = useMemo(() => {
+    return new THREE.SpriteMaterial({
+      color: new THREE.Color('#C5A017'),
+      blending: THREE.AdditiveBlending,
+      transparent: true,
+      depthWrite: false,
+      depthTest: true,
+      opacity: 1,
+    })
+  }, [])
+
+  return (
+    <sprite position={[0, 60, 0]} scale={[0.8, 0.8, 0.8]}>
+      <primitive object={material} attach="material" />
+    </sprite>
+  )
+}
+
 export const Background = memo(function Background({ intensity, axis, speed }: { intensity: number, axis: [number, number, number], speed: number }) {
   const { scene } = useThree()
 

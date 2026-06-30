@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import type { Beacon } from '../types/world';
 import { renderers } from './assetRenderers/registry';
 import { useGameStore } from '../core/store/gameStore';
+import { useVisitedStore } from '../core/store/visitedStore';
 
 export interface AssetViewerProps {
   beacon: Beacon;
@@ -24,11 +25,23 @@ const CONSTELLATION_BG: React.CSSProperties = {
     'repeating-linear-gradient(0deg, rgba(212,175,55,0.25) 0, rgba(212,175,55,0.25) 0.5px, transparent 0.5px, transparent 60px), repeating-linear-gradient(90deg, rgba(212,175,55,0.25) 0, rgba(212,175,55,0.25) 0.5px, transparent 0.5px, transparent 60px)',
 };
 
+// TP3-003 / TP4 — derive personId from beacon.assetUrl which has shape
+// `/api/assets/<personId>/...`. This is a temporary measure until WorldPage
+// threads personId directly into AssetViewer; WorldPage is owned by a
+// different wave agent and outside this file's scope.
+function derivePersonIdFromAssetUrl(assetUrl: string): string | null {
+  const parts = assetUrl.split('/');
+  // parts[0] = '' (leading slash), parts[1] = 'api', parts[2] = 'assets', parts[3] = personId
+  return parts[3] ?? null;
+}
+
 export default function AssetViewer({ beacon, onClose, reducedMotion }: AssetViewerProps) {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const Renderer = renderers[beacon.type];
   const setModalOpen = useGameStore((state) => state.setModalOpen);
+  // Contract: useVisitedStore() returns the full store object.
+  const { markVisited } = useVisitedStore();
 
   useEffect(() => {
     closeButtonRef.current?.focus();
@@ -41,11 +54,63 @@ export default function AssetViewer({ beacon, onClose, reducedMotion }: AssetVie
     };
   }, [setModalOpen]);
 
+  // TP3-003 / TP4 — mark the beacon as visited once a viewer mounts for it.
+  // markVisited is intentionally excluded from deps: WD-4's store may not
+  // memoize function identity, and the mark is keyed on the (personId, beaconId)
+  // tuple which is what we actually care about for re-runs.
+  useEffect(() => {
+    if (!Renderer) return;
+    const personId = derivePersonIdFromAssetUrl(beacon.assetUrl);
+    if (personId) {
+      markVisited(personId, beacon.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [Renderer, beacon.assetUrl, beacon.id]);
+
   const handleKeyDown = useCallback(
     (event: React.KeyboardEvent) => {
       if (event.key === 'Escape') {
         onClose();
         return;
+      }
+
+      // TP4-008 — media keyboard shortcuts. Look for the first <video> or
+      // <audio> inside the panel and dispatch the action. We intentionally
+      // run BEFORE the focus-trap branch so shortcuts work while focus
+      // is anywhere inside the modal.
+      const media =
+        panelRef.current?.querySelector<HTMLMediaElement>('video, audio') ?? null;
+      if (media) {
+        if (event.key === ' ' || event.code === 'Space') {
+          event.preventDefault();
+          if (media.paused) {
+            void media.play().catch(() => {});
+          } else {
+            media.pause();
+          }
+          return;
+        }
+        if (event.key === 'ArrowLeft') {
+          event.preventDefault();
+          media.currentTime = Math.max(0, media.currentTime - 10);
+          return;
+        }
+        if (event.key === 'ArrowRight') {
+          event.preventDefault();
+          const duration = isFinite(media.duration) ? media.duration : Infinity;
+          media.currentTime = Math.min(duration, media.currentTime + 10);
+          return;
+        }
+        if (event.key === 'ArrowUp') {
+          event.preventDefault();
+          media.volume = Math.min(1, media.volume + 0.1);
+          return;
+        }
+        if (event.key === 'ArrowDown') {
+          event.preventDefault();
+          media.volume = Math.max(0, media.volume - 0.1);
+          return;
+        }
       }
 
       if (event.key !== 'Tab' || !panelRef.current) return;

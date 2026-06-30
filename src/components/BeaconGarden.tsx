@@ -17,6 +17,7 @@ export function BeaconGarden({ config }: BeaconGardenProps) {
           beacon={beacon}
           state={states[beacon.id] ?? 'dormant'}
           distance={distances[beacon.id] ?? Infinity}
+          personId={config.personId}
         />
       ))}
     </>

@@ -12,6 +12,7 @@ import { DeviceDetector } from "../core/utils/DeviceDetector";
 import { UI } from "../ui/UI";
 import { preloadVATAssets } from "../components/Rose/core";
 import { WorldController } from "../components/WorldController";
+import { NorthStar } from "../components/background/Background";
 import { createContext } from "react";
 import * as THREE from "three/webgpu";
 import { KeyboardMapper } from "@core";
@@ -47,11 +48,20 @@ export interface AppProps {
 export default function App({ config }: AppProps) {
     const beamScene = useMemo(() => new THREE.Scene(), []);
     const [dpr, setDpr] = useState(1.5);
+    // TP2-025: Pause R3F render loop when tab is hidden
+    const [frameloop, setFrameloop] = useState<'always' | 'never'>('always');
 
     const toggleCameraMode = useGameStore((state) => state.toggleCameraMode);
     const setGpuError = useGameStore((state) => state.setGpuError);
     const setAudioListener = useGameStore((state) => state.setAudioListener);
     const gpuError = useGameStore((state) => state.gpuError);
+
+    // TP2-025: Pause RAF on tab hidden
+    useEffect(() => {
+        const onVis = () => setFrameloop(document.hidden ? 'never' : 'always');
+        document.addEventListener('visibilitychange', onVis);
+        return () => document.removeEventListener('visibilitychange', onVis);
+    }, []);
 
     // Check WebGPU support on mount
     useEffect(() => {
@@ -91,6 +101,7 @@ export default function App({ config }: AppProps) {
 
         {!gpuError && (
             <Canvas
+                frameloop={frameloop}
                 camera={{
                     fov: 45,
                     near: 0.1,
@@ -143,6 +154,8 @@ export default function App({ config }: AppProps) {
                         />
                         <ambientLight intensity={0.3} color="#0E1428" />
                         <DirectionalLight />
+                        {/* TP2-005: North star above spawn */}
+                        <NorthStar />
                         <Effects />
                     </Suspense>
                 </BeamSceneContext.Provider>

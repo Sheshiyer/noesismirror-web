@@ -53,7 +53,38 @@ interface GameState {
   modalOpen: boolean;
   duckAudio: number;
   setModalOpen: (open: boolean) => void;
+
+  // ===== Onboarding State (TP7) =====
+  onboardingPhase: OnboardingPhase;
+  setOnboardingPhase: (p: OnboardingPhase) => void;
+
+  // ===== HUD State (TP8) =====
+  hudVisible: boolean;
+  setHudVisible: (b: boolean) => void;
 }
+
+export type OnboardingPhase =
+  | 'idle'
+  | 'arriving'
+  | 'walked'
+  | 'first-approach'
+  | 'first-open'
+  | 'first-close'
+  | 'completion';
+
+// Read persisted onboarding completion flag once at module load.
+// Browser-only — guarded for SSR / test environments without window.
+const ONBOARDED_KEY = 'noesis_onboarded';
+const initialOnboardingPhase: OnboardingPhase = (() => {
+  if (typeof window === 'undefined') return 'arriving';
+  try {
+    return window.localStorage.getItem(ONBOARDED_KEY) === 'true'
+      ? 'completion'
+      : 'arriving';
+  } catch {
+    return 'arriving';
+  }
+})();
 
 export const useGameStore = create<GameState>((set, get) => ({
   // ===== Camera State =====
@@ -107,4 +138,12 @@ export const useGameStore = create<GameState>((set, get) => ({
   modalOpen: false,
   duckAudio: 1,
   setModalOpen: (open) => set({ modalOpen: open, duckAudio: open ? 0.15 : 1 }),
+
+  // ===== Onboarding State (TP7) =====
+  onboardingPhase: initialOnboardingPhase,
+  setOnboardingPhase: (p) => set({ onboardingPhase: p }),
+
+  // ===== HUD State (TP8) =====
+  hudVisible: true,
+  setHudVisible: (b) => set({ hudVisible: b }),
 }));

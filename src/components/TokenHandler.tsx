@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, type NavigateFunction } from 'react-router-dom';
 
 export function TokenHandler() {
   const location = useLocation();
@@ -15,4 +15,14 @@ export function TokenHandler() {
   }, [location, navigate]);
 
   return null;
+}
+
+/**
+ * Sign out the current user. Clears the auth token while preserving
+ * any other preference keys in localStorage, then navigates to the
+ * root route.
+ */
+export function signOut(navigate: NavigateFunction) {
+  localStorage.removeItem('noesis_token');
+  navigate('/', { replace: true });
 }

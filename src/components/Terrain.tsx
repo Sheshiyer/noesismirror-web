@@ -68,11 +68,18 @@ export function Terrain({
     }, [])
 
     return (
-        // High segment count is needed for smooth FBM terrain to match grass density
-        <mesh ref={meshRef} rotation={[-Math.PI / 2, 0, 0]}>
-            <planeGeometry args={[grassAreaSize, grassAreaSize, 128, 128]} />
-            <primitive object={material} />
-        </mesh>
+        <group>
+            {/* High segment count is needed for smooth FBM terrain to match grass density */}
+            <mesh ref={meshRef} rotation={[-Math.PI / 2, 0, 0]}>
+                <planeGeometry args={[grassAreaSize, grassAreaSize, 128, 128]} />
+                <primitive object={material} />
+            </mesh>
+            {/* TP2-006: Sacred-Gold spawn marker ring at origin */}
+            <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+                <ringGeometry args={[1.4, 1.5, 64]} />
+                <meshBasicMaterial color="#C5A017" transparent opacity={0.5} side={THREE.DoubleSide} />
+            </mesh>
+        </group>
     )
 }
 

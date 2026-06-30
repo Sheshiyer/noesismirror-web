@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { API_URL } from '../config';
+import { signOut } from './TokenHandler';
 
 interface LocationState {
   reason?: 'session_expired' | 'no_access';
@@ -20,13 +21,52 @@ const OUTER_CLASSES =
   'min-h-screen w-full bg-noesis-void text-noesis-parchment font-sans flex flex-col items-center justify-center relative overflow-hidden';
 
 const BUTTON_CLASSES =
-  'border border-noesis-gold/60 hover:border-noesis-gold bg-transparent hover:bg-noesis-gold/10 text-noesis-gold font-mono uppercase tracking-[0.25em] text-sm px-8 py-3 transition-colors duration-200 disabled:opacity-40 disabled:cursor-not-allowed';
+  'border border-noesis-gold/60 hover:border-noesis-gold bg-transparent hover:bg-noesis-gold/10 text-noesis-gold font-mono uppercase tracking-[0.25em] text-sm px-8 py-3 transition-colors duration-200 disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-noesis-gold/60 focus-visible:ring-offset-2 focus-visible:ring-offset-noesis-void';
+
+const SIGIL_DRAW_STYLE = `
+  @keyframes noesis-sigil-draw {
+    0% { opacity: 0; clip-path: inset(100% 0 0 0); }
+    100% { opacity: 1; clip-path: inset(0 0 0 0); }
+  }
+  .noesis-sigil-draw {
+    animation: noesis-sigil-draw 2s ease-out forwards;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .noesis-sigil-draw {
+      animation: none;
+      opacity: 1;
+      clip-path: none;
+    }
+  }
+`;
+
+/**
+ * Decode the `email` claim from a JWT payload. Returns null on any
+ * parse failure rather than throwing — sign-out UI should degrade
+ * gracefully if the token is malformed.
+ */
+function decodeEmailFromToken(token: string | null): string | null {
+  if (!token) return null;
+  try {
+    const parts = token.split('.');
+    if (parts.length < 2) return null;
+    let payload = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    while (payload.length % 4 !== 0) {
+      payload += '=';
+    }
+    const json = atob(payload);
+    const data = JSON.parse(json) as { email?: string };
+    return typeof data.email === 'string' ? data.email : null;
+  } catch {
+    return null;
+  }
+}
 
 function Backdrop() {
   return (
     <>
       <div
-        className="absolute inset-0 pointer-events-none opacity-[0.07]"
+        className="motion-safe:transition-opacity absolute inset-0 pointer-events-none opacity-[0.07]"
         style={{
           backgroundImage: `
             repeating-linear-gradient(0deg, transparent 0 39px, #C5A017 39px 40px),
@@ -37,7 +77,7 @@ function Backdrop() {
         }}
       />
       <div
-        className="absolute inset-0 pointer-events-none"
+        className="motion-safe:transition-opacity absolute inset-0 pointer-events-none"
         style={{
           background: 'radial-gradient(ellipse at center, rgba(45,0,80,0.4) 0%, transparent 60%)',
         }}
@@ -51,12 +91,15 @@ export default function Home() {
   const [grants, setGrants] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [focusedGrantIdx, setFocusedGrantIdx] = useState(0);
+  const grantRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const navigate = useNavigate();
   const location = useLocation();
   const flashReason = (location.state as LocationState | null)?.reason;
   const flashMessage = flashReason ? FLASH_MESSAGES[flashReason] : null;
 
   const getToken = () => localStorage.getItem('noesis_token');
+  const userEmail = isAuthenticated ? decodeEmailFromToken(getToken()) : null;
 
   const checkAuth = useCallback(async () => {
     setIsLoading(true);
@@ -106,6 +149,17 @@ export default function Home() {
     checkAuth();
   }, [checkAuth]);
 
+  // TP1-023 — reactive document.title
+  useEffect(() => {
+    if (isAuthenticated === null) return;
+    if (!isAuthenticated) {
+      document.title = 'Tryambakam Noesis · Sign In';
+      return;
+    }
+    const noun = grants.length === 1 ? 'Field' : 'Fields';
+    document.title = `Tryambakam Noesis · ${grants.length} ${noun}`;
+  }, [isAuthenticated, grants.length]);
+
   const handleAuth = () => {
     // Redirect to API auth endpoint - more reliable than popup
     // After CF Access login, API will redirect back with token in URL hash
@@ -120,14 +174,61 @@ export default function Home() {
     navigate('/home');
   };
 
-  // Loading state
+  const handleSignOut = () => {
+    signOut(navigate);
+    // Force fresh state — clears grants + isAuthenticated locally too
+    setIsAuthenticated(false);
+    setGrants([]);
+  };
+
+  // TP1-016 — arrow-key navigation across grant chips
+  const handleGrantKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (grants.length === 0) return;
+    const { key } = e;
+    if (key === 'ArrowDown' || key === 'ArrowRight') {
+      e.preventDefault();
+      const next = (focusedGrantIdx + 1) % grants.length;
+      setFocusedGrantIdx(next);
+      grantRefs.current[next]?.focus();
+    } else if (key === 'ArrowUp' || key === 'ArrowLeft') {
+      e.preventDefault();
+      const next = (focusedGrantIdx - 1 + grants.length) % grants.length;
+      setFocusedGrantIdx(next);
+      grantRefs.current[next]?.focus();
+    } else if (key === 'Enter') {
+      e.preventDefault();
+      const grant = grants[focusedGrantIdx];
+      if (grant) handleEnterField(grant);
+    }
+  };
+
+  // TP1-008 — top-right header with email + sign-out (shown only when authenticated)
+  const AuthHeader = isAuthenticated ? (
+    <header className="absolute top-4 right-6 z-20 flex items-center gap-4 font-mono text-xs text-noesis-parchment/60">
+      {userEmail && <span>{userEmail}</span>}
+      <button
+        type="button"
+        onClick={handleSignOut}
+        className="hover:text-noesis-gold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-noesis-gold/60 focus-visible:ring-offset-2 focus-visible:ring-offset-noesis-void"
+      >
+        [ sign out ]
+      </button>
+    </header>
+  ) : null;
+
+  // Loading state — TP1-007 sigil draw animation
   if (isLoading) {
     return (
       <div className={OUTER_CLASSES}>
+        <style>{SIGIL_DRAW_STYLE}</style>
         <Backdrop />
         <div className="relative z-10 flex flex-col items-center">
           <div className="mb-8 opacity-90">
-            <img src="/brand-logo.svg" alt="Tryambakam Noesis" className="w-24 h-24 animate-pulse" />
+            <img
+              src="/brand-logo.svg"
+              alt="Tryambakam Noesis"
+              className="w-24 h-24 noesis-sigil-draw"
+            />
           </div>
           <div className="font-mono text-xs text-noesis-parchment/60 uppercase tracking-[0.3em]">
             Entering the field…
@@ -142,6 +243,7 @@ export default function Home() {
     return (
       <div className={OUTER_CLASSES}>
         <Backdrop />
+        {AuthHeader}
         <div className="relative z-10 flex flex-col items-center">
           <div className="mb-8 opacity-90">
             <img src="/brand-logo.svg" alt="Tryambakam Noesis" className="w-24 h-24" />
@@ -166,6 +268,7 @@ export default function Home() {
   return (
     <div className={OUTER_CLASSES}>
       <Backdrop />
+      {AuthHeader}
       <div className="relative z-10 flex flex-col items-center w-full">
         <div className="mb-8 opacity-90">
           <img src="/brand-logo.svg" alt="Tryambakam Noesis" className="w-24 h-24" />
@@ -187,7 +290,8 @@ export default function Home() {
           </div>
         )}
 
-        <div className="max-w-2xl font-sans text-noesis-parchment/80 text-center space-y-4 leading-relaxed mb-12 px-6">
+        {/* TP1-018 — space-y-4 → space-y-6 */}
+        <div className="max-w-2xl font-sans text-noesis-parchment/80 text-center space-y-6 leading-relaxed mb-12 px-6">
           <p>A private 3D memory palace for witness premium packs.</p>
           <p>The 16 symbolic mirrors of the Noesis Engine are cast here as a walkable field.</p>
           <p>Terrain becomes text. Distance becomes inquiry.</p>
@@ -203,13 +307,17 @@ export default function Home() {
             </button>
           </div>
         ) : grants.length === 0 ? (
+          /* TP1-009 + TP1-010 — empty-state copy + mailto CTA */
           <div className="flex flex-col items-center gap-4">
             <div className="font-mono text-xs text-noesis-parchment/60 uppercase tracking-[0.3em]">
-              Your account has no granted readings.
+              No fields are currently inscribed to your name.
             </div>
-            <button className={BUTTON_CLASSES} onClick={handleEnterDashboard}>
-              [ ENTER DASHBOARD ]
-            </button>
+            <a
+              className={BUTTON_CLASSES}
+              href="mailto:sheshnarayan.iyer@gmail.com?subject=Tryambakam Noesis · Access Request"
+            >
+              [ REQUEST ACCESS ]
+            </a>
           </div>
         ) : grants.length === 1 ? (
           <div className="flex flex-col items-center">
@@ -219,15 +327,29 @@ export default function Home() {
           </div>
         ) : (
           <div className="flex flex-col items-center w-full max-w-md">
+            {/* TP1-020 — contextual count line */}
             <div className="font-mono text-xs text-noesis-parchment/50 uppercase tracking-[0.3em] mb-4">
-              Your Readings
+              {grants.length} fields available
             </div>
-            <div className="flex flex-col gap-3 w-full mb-6">
-              {grants.map((grant) => (
+            {/* TP1-016 — arrow-key nav container */}
+            <div
+              className="flex flex-col gap-3 w-full mb-6"
+              role="listbox"
+              aria-label="Available fields"
+              onKeyDown={handleGrantKeyDown}
+            >
+              {grants.map((grant, idx) => (
                 <button
                   key={grant}
+                  ref={(el) => {
+                    grantRefs.current[idx] = el;
+                  }}
+                  tabIndex={0}
+                  role="option"
+                  aria-selected={idx === focusedGrantIdx}
                   className={`${BUTTON_CLASSES} w-full`}
                   onClick={() => handleEnterField(grant)}
+                  onFocus={() => setFocusedGrantIdx(idx)}
                 >
                   [ {grant.toUpperCase()} ]
                 </button>

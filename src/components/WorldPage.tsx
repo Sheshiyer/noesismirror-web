@@ -8,6 +8,9 @@ import App from '../app/App';
 import DiscoveryPanel from './DiscoveryPanel';
 import AssetViewer from './AssetViewer';
 import BeaconAnnouncer from './BeaconAnnouncer';
+import HUD from './HUD';
+import Onboarding from './Onboarding';
+import AmbientAudio from './AmbientAudio';
 
 export default function WorldPage() {
   const { personId } = useParams<{ personId: string }>();
@@ -81,6 +84,8 @@ export default function WorldPage() {
           state={states[displayBeacon.id] ?? 'dormant'}
           distance={distances[displayBeacon.id] ?? Infinity}
           reducedMotion={reducedMotion}
+          personId={personId!}
+          onOpen={() => setViewerOpen(true)}
         />
       )}
       {viewerOpen && displayBeacon && (
@@ -90,6 +95,13 @@ export default function WorldPage() {
           reducedMotion={reducedMotion}
         />
       )}
+      <HUD
+        personId={personId!}
+        personName={config.personName}
+        beacons={config.beacons}
+      />
+      <Onboarding />
+      <AmbientAudio />
     </div>
   );
 }

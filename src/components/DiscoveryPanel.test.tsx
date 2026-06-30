@@ -37,7 +37,8 @@ describe('DiscoveryPanel', () => {
 
     expect(screen.getByText('Test Beacon')).toBeInTheDocument();
     expect(screen.getByText('A test beacon')).toBeInTheDocument();
-    expect(screen.getByText(/press G to enter/i)).toBeInTheDocument();
+    // Caption is now type-specific per TP5-018 — 'reading' → 'press G to read'
+    expect(screen.getByText(/press G to read/i)).toBeInTheDocument();
   });
 
   it('renders panel without [G] glyph when only approachable', () => {
@@ -51,6 +52,6 @@ describe('DiscoveryPanel', () => {
     );
 
     expect(screen.getByText('Test Beacon')).toBeInTheDocument();
-    expect(screen.queryByText(/press G to enter/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/press G to read/i)).not.toBeInTheDocument();
   });
 });

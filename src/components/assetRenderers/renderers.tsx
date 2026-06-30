@@ -1,5 +1,5 @@
 import type { FC } from 'react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { BeaconRendererProps } from './types';
 import { buildAssetUrl } from '../../config';
 
@@ -12,47 +12,92 @@ function stripFrontmatter(text: string): string {
 }
 
 // ---------------------------------------------------------------------------
+// TP4-033 — Shared loading sigil (inline, no new file).
+// Sacred-Gold pulsing brand glyph at Panchang 2xl, motion-safe animation.
+// ---------------------------------------------------------------------------
+const LoadingSigil: FC = () => (
+  <div className="flex items-center justify-center py-12" role="status" aria-live="polite">
+    <div
+      className="w-8 h-8 flex items-center justify-center font-display text-2xl text-noesis-gold motion-safe:animate-pulse"
+      aria-label="Loading"
+    >
+      {'◆'}
+    </div>
+  </div>
+);
+
+// ---------------------------------------------------------------------------
+// TP4-034 — Shared error block (inline, no new file).
+// Brand-aligned: emerald uppercase mono text, [ RETRY ] + [ DOWNLOAD ] buttons
+// styled to match the existing brand button look (no rounding, no shadow).
+// ---------------------------------------------------------------------------
+interface ErrorBlockProps {
+  url: string; // already-resolved buildAssetUrl(...) string for DOWNLOAD link
+  onRetry: () => void;
+}
+const ErrorBlock: FC<ErrorBlockProps> = ({ url, onRetry }) => (
+  <div className="border border-noesis-emerald/40 bg-noesis-void/60 p-6 max-w-[60ch] mx-auto">
+    <p className="font-mono text-noesis-emerald uppercase text-sm tracking-widest">
+      Failed to load asset
+    </p>
+    <div className="flex items-center gap-4 mt-4">
+      <button
+        type="button"
+        onClick={onRetry}
+        className="font-mono text-xs text-noesis-gold uppercase tracking-widest border border-noesis-gold/40 px-3 py-1 hover:text-noesis-emerald hover:border-noesis-emerald/60 focus:outline-none focus:ring-1 focus:ring-noesis-gold/60"
+      >
+        [ RETRY ]
+      </button>
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        download
+        className="font-mono text-xs text-noesis-gold uppercase tracking-widest border border-noesis-gold/40 px-3 py-1 hover:text-noesis-emerald hover:border-noesis-emerald/60 focus:outline-none focus:ring-1 focus:ring-noesis-gold/60"
+      >
+        [ DOWNLOAD ]
+      </a>
+    </div>
+  </div>
+);
+
+type FetchStatus = 'loading' | 'ready' | 'error';
+
+// ---------------------------------------------------------------------------
 // ReadingViewer — markdown reports (.md)
 // ---------------------------------------------------------------------------
 export const ReadingViewer: FC<BeaconRendererProps> = ({ beacon }) => {
-  const [text, setText] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const url = buildAssetUrl(beacon.assetUrl);
+  const [status, setStatus] = useState<FetchStatus>('loading');
+  const [text, setText] = useState<string>('');
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
-    setText(null);
-    setError(null);
-    fetch(buildAssetUrl(beacon.assetUrl))
+    setStatus('loading');
+    setText('');
+    fetch(url)
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.text();
       })
       .then((raw) => {
-        if (!cancelled) setText(stripFrontmatter(raw));
+        if (cancelled) return;
+        setText(stripFrontmatter(raw));
+        setStatus('ready');
       })
-      .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load reading');
+      .catch(() => {
+        if (!cancelled) setStatus('error');
       });
     return () => {
       cancelled = true;
     };
-  }, [beacon.assetUrl]);
+  }, [url, reloadKey]);
 
-  if (error) {
-    return (
-      <article className="prose prose-invert max-w-[60ch] mx-auto text-noesis-parchment font-sans">
-        <p className="text-red-400 font-mono text-sm">Could not load reading: {error}</p>
-      </article>
-    );
-  }
+  const retry = useCallback(() => setReloadKey((k) => k + 1), []);
 
-  if (text === null) {
-    return (
-      <p className="font-mono text-xs text-noesis-parchment/60 text-center mt-12">
-        Loading reading…
-      </p>
-    );
-  }
+  if (status === 'loading') return <LoadingSigil />;
+  if (status === 'error') return <ErrorBlock url={url} onRetry={retry} />;
 
   // No markdown library available in deps — render raw text preserving whitespace.
   // Headings inside the article still inherit `font-display` via the prose container.
@@ -67,35 +112,65 @@ export const ReadingViewer: FC<BeaconRendererProps> = ({ beacon }) => {
 
 // ---------------------------------------------------------------------------
 // AudioViewer
+// TP4-034 — onError surfaces brand error block with retry/download.
 // ---------------------------------------------------------------------------
 export const AudioViewer: FC<BeaconRendererProps> = ({ beacon }) => {
   const heading = beacon.summary || beacon.label;
+  const url = buildAssetUrl(beacon.assetUrl);
+  const [errored, setErrored] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  const retry = useCallback(() => {
+    setErrored(false);
+    setReloadKey((k) => k + 1);
+  }, []);
+
   return (
     <div className="bg-noesis-void p-6 [&_audio]:accent-noesis-emerald">
       <h3 className="font-display text-noesis-gold text-xl mb-4">{heading}</h3>
-      <audio
-        controls
-        src={buildAssetUrl(beacon.assetUrl)}
-        className="w-full"
-        preload="metadata"
-      />
+      {errored ? (
+        <ErrorBlock url={url} onRetry={retry} />
+      ) : (
+        <audio
+          key={reloadKey}
+          controls
+          src={url}
+          className="w-full"
+          preload="metadata"
+          onError={() => setErrored(true)}
+        />
+      )}
     </div>
   );
 };
 
 // ---------------------------------------------------------------------------
 // VideoViewer
+// TP4-034 — onError surfaces brand error block with retry/download.
 // ---------------------------------------------------------------------------
 export const VideoViewer: FC<BeaconRendererProps> = ({ beacon }) => {
+  const url = buildAssetUrl(beacon.assetUrl);
+  const [errored, setErrored] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  const retry = useCallback(() => {
+    setErrored(false);
+    setReloadKey((k) => k + 1);
+  }, []);
+
   return (
     <div>
-      <video
-        controls
-        src={buildAssetUrl(beacon.assetUrl)}
-        className="w-full max-h-[70vh] bg-black"
-        preload="metadata"
-      />
-      {beacon.summary && (
+      {errored ? (
+        <ErrorBlock url={url} onRetry={retry} />
+      ) : (
+        <video
+          key={reloadKey}
+          controls
+          src={url}
+          className="w-full max-h-[70vh] bg-black"
+          preload="metadata"
+          onError={() => setErrored(true)}
+        />
+      )}
+      {beacon.summary && !errored && (
         <p className="font-mono text-xs text-noesis-parchment/50 mt-3 text-center">
           {beacon.summary}
         </p>
@@ -106,9 +181,38 @@ export const VideoViewer: FC<BeaconRendererProps> = ({ beacon }) => {
 
 // ---------------------------------------------------------------------------
 // SlidesViewer — PDF via <object>
+// TP4-033 / TP4-034 — HEAD-probe gives us loading + error states.
 // ---------------------------------------------------------------------------
 export const SlidesViewer: FC<BeaconRendererProps> = ({ beacon }) => {
   const url = buildAssetUrl(beacon.assetUrl);
+  const [status, setStatus] = useState<FetchStatus>('loading');
+  const [reloadKey, setReloadKey] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    setStatus('loading');
+    fetch(url, { method: 'HEAD' })
+      .then((res) => {
+        if (cancelled) return;
+        if (!res.ok) {
+          setStatus('error');
+        } else {
+          setStatus('ready');
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setStatus('error');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [url, reloadKey]);
+
+  const retry = useCallback(() => setReloadKey((k) => k + 1), []);
+
+  if (status === 'loading') return <LoadingSigil />;
+  if (status === 'error') return <ErrorBlock url={url} onRetry={retry} />;
+
   return (
     <div>
       <h3 className="font-display text-noesis-gold text-xl mb-3">{beacon.label}</h3>
@@ -133,20 +237,27 @@ export const SlidesViewer: FC<BeaconRendererProps> = ({ beacon }) => {
 
 // ---------------------------------------------------------------------------
 // StudyViewer — markdown for quiz/flashcards, JSON for mind-map
+// TP4-033 / TP4-034 — unified status state-machine across .md and .json branches.
 // ---------------------------------------------------------------------------
 export const StudyViewer: FC<BeaconRendererProps> = ({ beacon }) => {
+  const url = buildAssetUrl(beacon.assetUrl);
   const json = isJsonUrl(beacon.assetUrl);
-  const [content, setContent] = useState<string | null>(null);
+  const markdown = isMarkdownUrl(beacon.assetUrl);
+  const [status, setStatus] = useState<FetchStatus>('loading');
+  const [content, setContent] = useState<string>('');
   const [data, setData] = useState<unknown>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
+    if (!json && !markdown) {
+      // Nothing to fetch for unknown extension — show a passive notice (handled below).
+      setStatus('ready');
+      return;
+    }
     let cancelled = false;
-    setContent(null);
+    setStatus('loading');
+    setContent('');
     setData(null);
-    setError(null);
-
-    const url = buildAssetUrl(beacon.assetUrl);
 
     if (json) {
       fetch(url)
@@ -155,35 +266,38 @@ export const StudyViewer: FC<BeaconRendererProps> = ({ beacon }) => {
           return res.json();
         })
         .then((parsed) => {
-          if (!cancelled) setData(parsed);
+          if (cancelled) return;
+          setData(parsed);
+          setStatus('ready');
         })
-        .catch((err) => {
-          if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load study data');
+        .catch(() => {
+          if (!cancelled) setStatus('error');
         });
-    } else if (isMarkdownUrl(beacon.assetUrl)) {
+    } else {
       fetch(url)
         .then((res) => {
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           return res.text();
         })
         .then((raw) => {
-          if (!cancelled) setContent(stripFrontmatter(raw));
+          if (cancelled) return;
+          setContent(stripFrontmatter(raw));
+          setStatus('ready');
         })
-        .catch((err) => {
-          if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load study guide');
+        .catch(() => {
+          if (!cancelled) setStatus('error');
         });
     }
 
     return () => {
       cancelled = true;
     };
-  }, [beacon.assetUrl, json]);
+  }, [url, json, markdown, reloadKey]);
 
-  if (error) {
-    return (
-      <p className="font-mono text-sm text-red-400">Could not load study material: {error}</p>
-    );
-  }
+  const retry = useCallback(() => setReloadKey((k) => k + 1), []);
+
+  if ((json || markdown) && status === 'loading') return <LoadingSigil />;
+  if (status === 'error') return <ErrorBlock url={url} onRetry={retry} />;
 
   if (json) {
     return (
@@ -191,18 +305,14 @@ export const StudyViewer: FC<BeaconRendererProps> = ({ beacon }) => {
         <p className="font-mono text-xs text-noesis-parchment/60 uppercase tracking-widest mb-3">
           Interactive view coming soon &mdash; raw data shown below
         </p>
-        {data === null ? (
-          <p className="font-mono text-xs text-noesis-parchment/60">Loading study data…</p>
-        ) : (
-          <pre className="font-mono text-xs text-noesis-parchment/80 overflow-auto bg-noesis-void p-4 border border-noesis-gold/20">
-            {JSON.stringify(data, null, 2)}
-          </pre>
-        )}
+        <pre className="font-mono text-xs text-noesis-parchment/80 overflow-auto bg-noesis-void p-4 border border-noesis-gold/20">
+          {JSON.stringify(data, null, 2)}
+        </pre>
       </div>
     );
   }
 
-  if (!isMarkdownUrl(beacon.assetUrl)) {
+  if (!markdown) {
     return (
       <p className="font-mono text-sm text-noesis-parchment/70">
         Study content will load from: {beacon.assetUrl}
@@ -212,13 +322,9 @@ export const StudyViewer: FC<BeaconRendererProps> = ({ beacon }) => {
 
   return (
     <article className="prose prose-invert max-w-[60ch] mx-auto text-noesis-parchment font-sans [&_h1]:font-display [&_h2]:font-display [&_h3]:font-display [&_h4]:font-display [&_h5]:font-display [&_h6]:font-display">
-      {content === null ? (
-        <p className="font-mono text-xs text-noesis-parchment/60">Loading study guide…</p>
-      ) : (
-        <pre className="whitespace-pre-wrap font-sans text-noesis-parchment leading-relaxed bg-transparent border-0 p-0 m-0">
-          {content}
-        </pre>
-      )}
+      <pre className="whitespace-pre-wrap font-sans text-noesis-parchment leading-relaxed bg-transparent border-0 p-0 m-0">
+        {content}
+      </pre>
     </article>
   );
 };
