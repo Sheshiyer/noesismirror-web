@@ -28,7 +28,7 @@ export default function WorldPage() {
     }
   }, [error, navigate, personId]);
 
-  const { states, activeBeaconId } = useBeaconProximity(config?.beacons ?? []);
+  const { states, activeBeaconId, distances } = useBeaconProximity(config?.beacons ?? []);
 
   const displayBeaconId = selectedBeaconId ?? activeBeaconId;
   const displayBeacon = useMemo(
@@ -79,7 +79,7 @@ export default function WorldPage() {
         <DiscoveryPanel
           beacon={displayBeacon}
           state={states[displayBeacon.id] ?? 'dormant'}
-          onOpen={() => setViewerOpen(true)}
+          distance={distances[displayBeacon.id] ?? Infinity}
           reducedMotion={reducedMotion}
         />
       )}

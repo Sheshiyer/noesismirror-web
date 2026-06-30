@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect } from 'vitest';
+import { render, screen } from '@testing-library/react';
 import DiscoveryPanel from '../components/DiscoveryPanel';
 import type { Beacon } from '../types/world';
 
@@ -18,28 +18,39 @@ describe('DiscoveryPanel', () => {
       <DiscoveryPanel
         beacon={beacon}
         state="dormant"
-        onOpen={vi.fn()}
+        distance={20}
         reducedMotion={false}
       />
     );
     expect(container.firstChild).toBeNull();
   });
 
-  it('renders beacon info and calls onOpen', () => {
-    const onOpen = vi.fn();
+  it('renders beacon info and the [G] glyph when active', () => {
     render(
       <DiscoveryPanel
         beacon={beacon}
         state="active"
-        onOpen={onOpen}
+        distance={2}
         reducedMotion={false}
       />
     );
 
     expect(screen.getByText('Test Beacon')).toBeInTheDocument();
     expect(screen.getByText('A test beacon')).toBeInTheDocument();
+    expect(screen.getByText(/press G to enter/i)).toBeInTheDocument();
+  });
 
-    fireEvent.click(screen.getByRole('button', { name: /open/i }));
-    expect(onOpen).toHaveBeenCalledTimes(1);
+  it('renders panel without [G] glyph when only approachable', () => {
+    render(
+      <DiscoveryPanel
+        beacon={beacon}
+        state="approachable"
+        distance={5}
+        reducedMotion={false}
+      />
+    );
+
+    expect(screen.getByText('Test Beacon')).toBeInTheDocument();
+    expect(screen.queryByText(/press G to enter/i)).not.toBeInTheDocument();
   });
 });

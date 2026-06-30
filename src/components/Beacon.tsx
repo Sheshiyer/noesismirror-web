@@ -24,9 +24,12 @@ const TYPE_COLORS: Record<string, THREE.Color> = {
 interface BeaconProps {
   beacon: BeaconType;
   state: BeaconMarkerState;
+  distance?: number;
 }
 
-export function Beacon({ beacon, state }: BeaconProps) {
+const APPROACH_DISTANCE = 6;
+
+export function Beacon({ beacon, state, distance = Infinity }: BeaconProps) {
   const groupRef = useRef<Group>(null);
   const crystalRef = useRef<Mesh>(null);
   const coreRef = useRef<Mesh>(null);
@@ -111,30 +114,40 @@ export function Beacon({ beacon, state }: BeaconProps) {
           <meshBasicMaterial color={typeColor} transparent opacity={state === 'dormant' ? 0.04 : 0.12} />
         </mesh>
 
-        {/* Floating label */}
-        <group position={[0, 1.6, 0]}>
-          <Html center transform={false}>
-            <div
-              style={{
-                fontFamily: 'Cousine, monospace',
-                fontSize: '0.65rem',
-                letterSpacing: '0.12em',
-                color: state === 'dormant' ? '#94a3b8' : '#ffffff',
-                background: 'rgba(0,0,0,0.45)',
-                border: `1px solid ${state === 'dormant' ? 'rgba(148,163,184,0.25)' : 'rgba(255,255,255,0.35)'}`,
-                borderRadius: '4px',
-                padding: '3px 8px',
-                whiteSpace: 'nowrap',
-                pointerEvents: 'none',
-                textTransform: 'uppercase',
-                opacity: state === 'dormant' ? 0.6 : 1,
-                transition: 'opacity 0.3s ease, border-color 0.3s ease, color 0.3s ease',
-              }}
-            >
-              {label}
-            </div>
-          </Html>
-        </group>
+        {/* Floating label — proximity-faded; invisible from afar */}
+        {(() => {
+          // Fade in as character approaches: 0 at distance >= 8, 1 at distance <= 6
+          const proximityOpacity = Math.max(
+            0,
+            Math.min(1, (APPROACH_DISTANCE + 2 - distance) / 2)
+          );
+          if (proximityOpacity <= 0.001) return null;
+          return (
+            <group position={[0, 1.6, 0]}>
+              <Html center transform={false}>
+                <div
+                  style={{
+                    fontFamily: 'Cousine, monospace',
+                    fontSize: '0.65rem',
+                    letterSpacing: '0.12em',
+                    color: state === 'dormant' ? '#94a3b8' : '#ffffff',
+                    background: 'rgba(0,0,0,0.45)',
+                    border: `1px solid ${state === 'dormant' ? 'rgba(148,163,184,0.25)' : 'rgba(255,255,255,0.35)'}`,
+                    borderRadius: '4px',
+                    padding: '3px 8px',
+                    whiteSpace: 'nowrap',
+                    pointerEvents: 'none',
+                    textTransform: 'uppercase',
+                    opacity: proximityOpacity,
+                    transition: 'opacity 0.3s ease, border-color 0.3s ease, color 0.3s ease',
+                  }}
+                >
+                  {label}
+                </div>
+              </Html>
+            </group>
+          );
+        })()}
       </group>
     </group>
   );

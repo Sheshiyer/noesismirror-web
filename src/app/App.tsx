@@ -141,6 +141,7 @@ export default function App({ config }: AppProps) {
                             files="/textures/potsdamer_platz_1k_nb.hdr"
                             environmentIntensity={0.5}
                         />
+                        <ambientLight intensity={0.3} color="#0E1428" />
                         <DirectionalLight />
                         <Effects />
                     </Suspense>

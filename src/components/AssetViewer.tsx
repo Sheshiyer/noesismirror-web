@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import type { Beacon } from '../types/world';
 import { renderers } from './assetRenderers/registry';
+import { useGameStore } from '../core/store/gameStore';
 
 export interface AssetViewerProps {
   beacon: Beacon;
@@ -17,14 +18,28 @@ const FOCUSABLE_SELECTORS = [
   '[tabindex]:not([tabindex="-1"])',
 ].join(', ');
 
+// Sacred-Gold constellation grid: hair-thin lines at low opacity, 60×60 cell grid.
+const CONSTELLATION_BG: React.CSSProperties = {
+  backgroundImage:
+    'repeating-linear-gradient(0deg, rgba(212,175,55,0.25) 0, rgba(212,175,55,0.25) 0.5px, transparent 0.5px, transparent 60px), repeating-linear-gradient(90deg, rgba(212,175,55,0.25) 0, rgba(212,175,55,0.25) 0.5px, transparent 0.5px, transparent 60px)',
+};
+
 export default function AssetViewer({ beacon, onClose, reducedMotion }: AssetViewerProps) {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const Renderer = renderers[beacon.type];
+  const setModalOpen = useGameStore((state) => state.setModalOpen);
 
   useEffect(() => {
     closeButtonRef.current?.focus();
   }, []);
+
+  useEffect(() => {
+    setModalOpen(true);
+    return () => {
+      setModalOpen(false);
+    };
+  }, [setModalOpen]);
 
   const handleKeyDown = useCallback(
     (event: React.KeyboardEvent) => {
@@ -58,7 +73,7 @@ export default function AssetViewer({ beacon, onClose, reducedMotion }: AssetVie
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-noesis-void/80 backdrop-blur-sm"
       onKeyDown={handleKeyDown}
       onClick={(event) => {
         if (event.target === event.currentTarget) {
@@ -68,30 +83,52 @@ export default function AssetViewer({ beacon, onClose, reducedMotion }: AssetVie
     >
       <div
         ref={panelRef}
-        className={`bg-neutral-900 border border-white/10 rounded-xl p-6 max-w-4xl w-full max-h-[90vh] flex flex-col ${
-          reducedMotion ? '' : 'transition-all duration-300 ease-out'
+        className={`relative bg-noesis-surface border border-noesis-gold/40 max-w-5xl w-[90vw] max-h-[88vh] flex flex-col py-8 px-10 ${
+          reducedMotion ? '' : 'transition-opacity duration-200 ease-out'
         }`}
         role={Renderer ? 'dialog' : 'alertdialog'}
         aria-modal="true"
         aria-label={beacon.label}
       >
-        <div className="flex items-center justify-between mb-4 shrink-0">
-          <h2 className="text-xl font-semibold text-white">{beacon.label}</h2>
-          <button
-            ref={closeButtonRef}
-            type="button"
-            onClick={onClose}
-            className="text-white/70 hover:text-white focus:outline-none focus:ring-2 focus:ring-white/50 rounded px-2 py-1"
-            aria-label="Close"
-          >
-            Close
-          </button>
+        {/* Sacred-Gold constellation grid backdrop */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0"
+          style={CONSTELLATION_BG}
+        />
+
+        {/* Header row */}
+        <div className="relative flex items-start justify-between shrink-0 gap-6">
+          <div className="min-w-0">
+            <h2 className="font-display text-2xl text-noesis-gold tracking-wide truncate">
+              {beacon.label}
+            </h2>
+            <p className="font-mono text-xs text-noesis-parchment/50 uppercase tracking-widest mt-1">
+              {beacon.type}
+            </p>
+          </div>
+          <div className="flex items-center gap-4 shrink-0">
+            <span className="font-mono text-xs text-noesis-parchment/50 uppercase tracking-widest hidden sm:inline">
+              [ ESC | G ]
+            </span>
+            <button
+              ref={closeButtonRef}
+              type="button"
+              onClick={onClose}
+              className="font-display text-noesis-gold text-2xl leading-none hover:text-noesis-emerald focus:outline-none focus:ring-1 focus:ring-noesis-gold/60 px-2"
+              aria-label="Close"
+            >
+              {'×'}
+            </button>
+          </div>
         </div>
-        <div className="flex-1 overflow-auto min-h-0">
+
+        {/* Body */}
+        <div className="flex-1 overflow-auto min-h-0 mt-6 relative">
           {Renderer ? (
             <Renderer beacon={beacon} />
           ) : (
-            <p className="text-white/80">
+            <p className="font-mono text-noesis-parchment/60">
               No viewer available for asset type &ldquo;{beacon.type}&rdquo;.
             </p>
           )}

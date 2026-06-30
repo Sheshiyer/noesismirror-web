@@ -7,7 +7,7 @@ interface BeaconGardenProps {
 }
 
 export function BeaconGarden({ config }: BeaconGardenProps) {
-  const { states } = useBeaconProximity(config.beacons);
+  const { states, distances } = useBeaconProximity(config.beacons);
 
   return (
     <>
@@ -16,6 +16,7 @@ export function BeaconGarden({ config }: BeaconGardenProps) {
           key={beacon.id}
           beacon={beacon}
           state={states[beacon.id] ?? 'dormant'}
+          distance={distances[beacon.id] ?? Infinity}
         />
       ))}
     </>

@@ -1,156 +1,37 @@
 import type { FC } from 'react';
 import { useEffect, useState } from 'react';
 import type { BeaconRendererProps } from './types';
+import { buildAssetUrl } from '../../config';
 
-const isHtmlUrl = (url: string): boolean => /\.html?$/i.test(url);
-const isMarkdownUrl = (url: string): boolean => /\.md$/i.test(url);
-
-interface MindMapNode {
-  name: string;
-  children?: MindMapNode[];
-}
-
-function renderTree(nodes: MindMapNode[], depth: number): React.ReactNode {
-  return (
-    <ul className="list-none space-y-0.5" style={{ paddingLeft: depth > 0 ? `${depth * 16}px` : '0' }}>
-      {nodes.map((node, i) => (
-        <li key={i}>
-          <span
-            className={depth === 0 ? 'font-semibold' : ''}
-            style={{
-              color: depth === 0 ? 'var(--noesis-gold)' : 'var(--noesis-parchment)',
-              fontSize: depth === 0 ? '0.875rem' : '0.8rem',
-              fontFamily: depth === 0 ? 'var(--noesis-font-display)' : 'var(--noesis-font-body)',
-            }}
-          >
-            {node.name}
-          </span>
-          {node.children && node.children.length > 0 && renderTree(node.children, depth + 1)}
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-const MindMapJsonView: FC<{ assetUrl: string }> = ({ assetUrl }) => {
-  const [jsonData, setJsonData] = useState<MindMapNode[] | null>(null);
-  const [jsonError, setJsonError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch(assetUrl)
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-      })
-      .then((data) => {
-        if (!cancelled) {
-          const nodes = data.children ? [data as MindMapNode] : (data.root ? [data.root] : []);
-          setJsonData(nodes);
-        }
-      })
-      .catch((err) => {
-        if (!cancelled) setJsonError(err instanceof Error ? err.message : 'Failed to load mind map');
-      });
-    return () => { cancelled = true; };
-  }, [assetUrl]);
-
-  if (jsonError) {
-    return (
-      <article className="prose prose-invert max-w-none overflow-auto rounded border border-white/10 bg-black/40 p-4 text-sm">
-        <p className="text-red-400">Could not load mind map: {jsonError}</p>
-      </article>
-    );
-  }
-
-  return (
-    <article className="prose prose-invert max-w-none overflow-auto rounded border border-white/10 bg-black/40 p-4 text-sm">
-      {jsonData === null ? (
-        <p style={{ color: 'var(--noesis-silver)' }}>Loading mind map…</p>
-      ) : (
-        renderTree(jsonData, 0)
-      )}
-    </article>
-  );
-};
+const isMarkdownUrl = (url: string): boolean => /\.md(\?|$)/i.test(url);
+const isJsonUrl = (url: string): boolean => /\.json(\?|$)/i.test(url);
 
 function stripFrontmatter(text: string): string {
   const match = text.match(/^---\s*\n[\s\S]*?\n---\s*\n/);
   return match ? text.slice(match[0].length).trimStart() : text;
 }
 
+// ---------------------------------------------------------------------------
+// ReadingViewer — markdown reports (.md)
+// ---------------------------------------------------------------------------
 export const ReadingViewer: FC<BeaconRendererProps> = ({ beacon }) => {
-  return (
-    <div className="space-y-2">
-      <iframe
-        className="w-full h-96 rounded border border-white/10 bg-white"
-        src={beacon.assetUrl}
-        title={beacon.label}
-        sandbox="allow-same-origin"
-      />
-      {!isHtmlUrl(beacon.assetUrl) && (
-        <p className="text-sm text-white/80">{beacon.assetUrl}</p>
-      )}
-    </div>
-  );
-};
-
-export const AudioViewer: FC<BeaconRendererProps> = ({ beacon }) => {
-  return (
-    <div className="rounded border border-white/10 bg-black/40 p-4">
-      <p className="text-sm mb-2" style={{ color: 'var(--noesis-silver)' }}>Audio Companion</p>
-      <audio controls src={beacon.assetUrl} className="w-full" />
-    </div>
-  );
-};
-
-export const VideoViewer: FC<BeaconRendererProps> = ({ beacon }) => {
-  return (
-    <div className="rounded border border-white/10 bg-black/40 overflow-hidden">
-      <video controls src={beacon.assetUrl} className="w-full max-h-[60vh]" />
-    </div>
-  );
-};
-
-export const SlidesViewer: FC<BeaconRendererProps> = ({ beacon }) => {
-  return (
-    <div className="space-y-4">
-      <iframe
-        className="w-full h-96 rounded border border-white/10 bg-white"
-        src={beacon.assetUrl}
-        title={beacon.label}
-      />
-      <a
-        href={beacon.assetUrl}
-        download
-        className="inline-block px-4 py-2 rounded text-sm transition-colors"
-        style={{
-          border: '1px solid var(--noesis-gold)',
-          color: 'var(--noesis-gold)',
-        }}
-      >
-        Download slides
-      </a>
-    </div>
-  );
-};
-
-export const StudyViewer: FC<BeaconRendererProps> = ({ beacon }) => {
-  const [content, setContent] = useState<string | null>(null);
+  const [text, setText] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    fetch(beacon.assetUrl)
+    setText(null);
+    setError(null);
+    fetch(buildAssetUrl(beacon.assetUrl))
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.text();
       })
-      .then((text) => {
-        if (!cancelled) setContent(stripFrontmatter(text));
+      .then((raw) => {
+        if (!cancelled) setText(stripFrontmatter(raw));
       })
       .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load study guide');
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load reading');
       });
     return () => {
       cancelled = true;
@@ -159,33 +40,184 @@ export const StudyViewer: FC<BeaconRendererProps> = ({ beacon }) => {
 
   if (error) {
     return (
-      <article className="prose prose-invert max-w-none overflow-auto rounded border border-white/10 bg-black/40 p-4 text-sm">
-        <p className="text-red-400">Could not load study guide: {error}</p>
-        <p className="text-white/60">{beacon.assetUrl}</p>
+      <article className="prose prose-invert max-w-[60ch] mx-auto text-noesis-parchment font-sans">
+        <p className="text-red-400 font-mono text-sm">Could not load reading: {error}</p>
       </article>
     );
   }
 
-  if (beacon.assetUrl.endsWith('.json')) {
-    return <MindMapJsonView assetUrl={beacon.assetUrl} />;
+  if (text === null) {
+    return (
+      <p className="font-mono text-xs text-noesis-parchment/60 text-center mt-12">
+        Loading reading…
+      </p>
+    );
+  }
+
+  // No markdown library available in deps — render raw text preserving whitespace.
+  // Headings inside the article still inherit `font-display` via the prose container.
+  return (
+    <article className="prose prose-invert max-w-[60ch] mx-auto text-noesis-parchment font-sans [&_h1]:font-display [&_h2]:font-display [&_h3]:font-display [&_h4]:font-display [&_h5]:font-display [&_h6]:font-display">
+      <pre className="whitespace-pre-wrap font-sans text-noesis-parchment leading-relaxed bg-transparent border-0 p-0 m-0">
+        {text}
+      </pre>
+    </article>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// AudioViewer
+// ---------------------------------------------------------------------------
+export const AudioViewer: FC<BeaconRendererProps> = ({ beacon }) => {
+  const heading = beacon.summary || beacon.label;
+  return (
+    <div className="bg-noesis-void p-6 [&_audio]:accent-noesis-emerald">
+      <h3 className="font-display text-noesis-gold text-xl mb-4">{heading}</h3>
+      <audio
+        controls
+        src={buildAssetUrl(beacon.assetUrl)}
+        className="w-full"
+        preload="metadata"
+      />
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// VideoViewer
+// ---------------------------------------------------------------------------
+export const VideoViewer: FC<BeaconRendererProps> = ({ beacon }) => {
+  return (
+    <div>
+      <video
+        controls
+        src={buildAssetUrl(beacon.assetUrl)}
+        className="w-full max-h-[70vh] bg-black"
+        preload="metadata"
+      />
+      {beacon.summary && (
+        <p className="font-mono text-xs text-noesis-parchment/50 mt-3 text-center">
+          {beacon.summary}
+        </p>
+      )}
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// SlidesViewer — PDF via <object>
+// ---------------------------------------------------------------------------
+export const SlidesViewer: FC<BeaconRendererProps> = ({ beacon }) => {
+  const url = buildAssetUrl(beacon.assetUrl);
+  return (
+    <div>
+      <h3 className="font-display text-noesis-gold text-xl mb-3">{beacon.label}</h3>
+      <object data={url} type="application/pdf" className="w-full h-[75vh] bg-black">
+        <div className="p-6 bg-noesis-void">
+          <p className="font-mono text-sm text-noesis-parchment/70 mb-3">
+            Your browser cannot display this PDF inline.
+          </p>
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-mono text-sm text-noesis-gold underline hover:text-noesis-emerald"
+          >
+            Open slides in new tab
+          </a>
+        </div>
+      </object>
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// StudyViewer — markdown for quiz/flashcards, JSON for mind-map
+// ---------------------------------------------------------------------------
+export const StudyViewer: FC<BeaconRendererProps> = ({ beacon }) => {
+  const json = isJsonUrl(beacon.assetUrl);
+  const [content, setContent] = useState<string | null>(null);
+  const [data, setData] = useState<unknown>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setContent(null);
+    setData(null);
+    setError(null);
+
+    const url = buildAssetUrl(beacon.assetUrl);
+
+    if (json) {
+      fetch(url)
+        .then((res) => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return res.json();
+        })
+        .then((parsed) => {
+          if (!cancelled) setData(parsed);
+        })
+        .catch((err) => {
+          if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load study data');
+        });
+    } else if (isMarkdownUrl(beacon.assetUrl)) {
+      fetch(url)
+        .then((res) => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return res.text();
+        })
+        .then((raw) => {
+          if (!cancelled) setContent(stripFrontmatter(raw));
+        })
+        .catch((err) => {
+          if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load study guide');
+        });
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [beacon.assetUrl, json]);
+
+  if (error) {
+    return (
+      <p className="font-mono text-sm text-red-400">Could not load study material: {error}</p>
+    );
+  }
+
+  if (json) {
+    return (
+      <div>
+        <p className="font-mono text-xs text-noesis-parchment/60 uppercase tracking-widest mb-3">
+          Interactive view coming soon &mdash; raw data shown below
+        </p>
+        {data === null ? (
+          <p className="font-mono text-xs text-noesis-parchment/60">Loading study data…</p>
+        ) : (
+          <pre className="font-mono text-xs text-noesis-parchment/80 overflow-auto bg-noesis-void p-4 border border-noesis-gold/20">
+            {JSON.stringify(data, null, 2)}
+          </pre>
+        )}
+      </div>
+    );
   }
 
   if (!isMarkdownUrl(beacon.assetUrl)) {
     return (
-      <article className="prose prose-invert max-w-none overflow-auto rounded border border-white/10 bg-black/40 p-4 text-sm">
-        <p>Study guide content will load from: {beacon.assetUrl}</p>
-      </article>
+      <p className="font-mono text-sm text-noesis-parchment/70">
+        Study content will load from: {beacon.assetUrl}
+      </p>
     );
   }
 
   return (
-    <article className="prose prose-invert max-w-none overflow-auto rounded border border-white/10 bg-black/40 p-4 text-sm">
+    <article className="prose prose-invert max-w-[60ch] mx-auto text-noesis-parchment font-sans [&_h1]:font-display [&_h2]:font-display [&_h3]:font-display [&_h4]:font-display [&_h5]:font-display [&_h6]:font-display">
       {content === null ? (
-        <p className="text-white/60">Loading study guide…</p>
+        <p className="font-mono text-xs text-noesis-parchment/60">Loading study guide…</p>
       ) : (
-        <div className="whitespace-pre-wrap leading-relaxed text-white/90">
+        <pre className="whitespace-pre-wrap font-sans text-noesis-parchment leading-relaxed bg-transparent border-0 p-0 m-0">
           {content}
-        </div>
+        </pre>
       )}
     </article>
   );

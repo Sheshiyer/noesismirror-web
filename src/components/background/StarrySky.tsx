@@ -4,7 +4,8 @@ import { Stars } from './Stars'
 
 export function StarrySky() {
     const control = useControls('StarrySky', {
-        intensity: { value: 0.1, min: 0, max: 1, step: 0.01 },
+        // raised from 0.1 default — was crushing the starmap into a flat gradient (visible 2026-06-30 audit)
+        intensity: { value: 0.55, min: 0.3, max: 1, step: 0.01 },
         axis: { value: [0.2, 1, 0] },
         speed: { value: 1.5, min: 0, max: 5, step: 0.01 },
     }, { collapsed: true })
