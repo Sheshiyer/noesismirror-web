@@ -43,8 +43,57 @@ const LERP_TAU = 0.2; // seconds
 
 // TP3-003 — Sacred-Gold visited ring (brand token #C5A017).
 const VISITED_RING_COLOR = new THREE.Color('#C5A017');
-// TP3-007 — Coherence-Emerald ground shadow disc.
-const GROUND_SHADOW_COLOR = new THREE.Color('#34d399');
+
+// Shader-based AOE indicator: a 12m-diameter disc (matching APPROACH_DISTANCE=6
+// radius) with radial falloff, a soft inner glow, and a sharp ring at the
+// ACTIVE threshold (3m). Replaces the previous flat circleGeometry that read
+// as a UI selector. Additive blending + breath modulation per state.
+const AOE_VERTEX_SHADER = /* glsl */ `
+  varying vec2 vUv;
+  void main() {
+    vUv = uv;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
+const AOE_FRAGMENT_SHADER = /* glsl */ `
+  varying vec2 vUv;
+  uniform float uTime;
+  uniform float uActiveRatio;  // ACTIVE / APPROACH (e.g. 3/6 = 0.5)
+  uniform float uState;        // 0=dormant, 0.5=approachable, 1=active
+  uniform vec3 uEmerald;
+  uniform vec3 uGold;
+
+  void main() {
+    vec2 center = vec2(0.5);
+    float dist = distance(vUv, center) * 2.0; // 0 at center, 1 at edge
+    if (dist > 1.0) discard;
+
+    // Soft outer falloff — fade from approach edge inward
+    float aoeBase = 1.0 - smoothstep(0.55, 1.0, dist);
+    // Faint inner bloom near beacon center
+    float innerBloom = (1.0 - smoothstep(0.0, 0.35, dist)) * 0.4;
+
+    // Sharp active-threshold ring — brighter as state climbs
+    float ringWidth = 0.018;
+    float activeRing = smoothstep(uActiveRatio - ringWidth, uActiveRatio, dist)
+                     - smoothstep(uActiveRatio, uActiveRatio + ringWidth, dist);
+
+    // Subtle breath modulation (long slow cycle)
+    float breath = 0.65 + 0.35 * (0.5 + 0.5 * sin(uTime * 0.33));
+
+    // State weighting: dormant barely visible; active full presence
+    float presence = mix(0.25, 1.0, uState);
+
+    float aoeAlpha = (aoeBase * 0.18 + innerBloom * 0.20) * presence * breath;
+    float ringAlpha = activeRing * (0.45 + 0.55 * uState) * breath;
+
+    // Color: emerald base, shift toward gold on active
+    vec3 color = mix(uEmerald, uGold, uState * 0.6);
+    float alpha = clamp(aoeAlpha + ringAlpha, 0.0, 1.0);
+
+    gl_FragColor = vec4(color, alpha);
+  }
+`;
 
 // TP3-006 — beacons levitate 0.3m above ground (base hover height).
 const BASE_Y = 0.3;
@@ -89,6 +138,28 @@ export function Beacon({ beacon, state, distance = Infinity, personId, onClick }
   );
   const currentColor = useRef(color.clone());
   const currentScale = useRef(PROXIMITY_SCALE[state]);
+
+  // AOE shader material — owned once per beacon, animated via uniforms.
+  const aoeMaterial = useMemo(() => {
+    const ACTIVE_DISTANCE_LOCAL = 3;
+    return new THREE.ShaderMaterial({
+      vertexShader: AOE_VERTEX_SHADER,
+      fragmentShader: AOE_FRAGMENT_SHADER,
+      uniforms: {
+        uTime: { value: 0 },
+        uActiveRatio: { value: ACTIVE_DISTANCE_LOCAL / APPROACH_DISTANCE },
+        uState: { value: state === 'active' ? 1.0 : state === 'approachable' ? 0.5 : 0.0 },
+        uEmerald: { value: new THREE.Color('#10B5A7') },
+        uGold: { value: new THREE.Color('#C5A017') },
+      },
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+      toneMapped: false,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // TP3-004 — time-in-active accumulator (seconds).
   const timeInActive = useRef(0);
@@ -219,17 +290,13 @@ export function Beacon({ beacon, state, distance = Infinity, personId, onClick }
       }
     });
 
-    // TP3-007 — ground shadow opacity pulses with 4-7-8 breath.
-    if (shadowRef.current) {
-      const sMat = shadowRef.current.material as THREE.MeshBasicMaterial;
-      const cycle = 19;
-      const phase = (t % cycle) / cycle;
-      let bm = 0;
-      if (phase < 4 / 19) bm = phase / (4 / 19);
-      else if (phase < 11 / 19) bm = 1;
-      else bm = 1 - (phase - 11 / 19) / (8 / 19);
-      sMat.opacity = 0.08 + 0.12 * bm;
-    }
+    // Shader-AOE — drive uniforms each frame. State lerps smoothly toward
+    // its target so transitions read as breathing, not snapping.
+    const targetStateVal = state === 'active' ? 1.0 : state === 'approachable' ? 0.5 : 0.0;
+    const u = aoeMaterial.uniforms;
+    u.uTime.value = t;
+    const curStateVal = u.uState.value as number;
+    u.uState.value = curStateVal + (targetStateVal - curStateVal) * alpha;
 
     // TP3-025 — soft collision: push the character out to COLLISION_RADIUS.
     if (character) {
@@ -275,10 +342,13 @@ export function Beacon({ beacon, state, distance = Infinity, personId, onClick }
 
   return (
     <group position={[beacon.position.x, 0, beacon.position.z]}>
-      {/* TP3-007 — Coherence-Emerald ground shadow disc that breathes. */}
+      {/* Shader-based AOE — 12m disc (APPROACH_DISTANCE * 2) with radial
+          falloff + active-radius ring at 3m. Replaces the flat
+          circleGeometry that read as a UI selector. Additive-blended,
+          breath-modulated, state-aware. */}
       <mesh ref={shadowRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
-        <circleGeometry args={[0.8, 32]} />
-        <meshBasicMaterial color={GROUND_SHADOW_COLOR} transparent opacity={0.1} />
+        <planeGeometry args={[APPROACH_DISTANCE * 2, APPROACH_DISTANCE * 2]} />
+        <primitive object={aoeMaterial} attach="material" />
       </mesh>
 
       {/* TP3-003 — Sacred-Gold ground ring marking visited beacons. */}

@@ -36,11 +36,14 @@ export default function Rose({
     })
 
     useEffect(() => {
-        const onHit = ({ position, radius }: { position: THREE.Vector3, radius: number }) => {
+        // Roses bloom on beacon approach (area-of-interest reveal) rather than
+        // on random beam:hit events under the astronaut's feet. Same spawn API,
+        // same petal effect — only the trigger and location moved to beacons.
+        const onApproach = ({ position, radius }: { position: THREE.Vector3, radius: number }) => {
             spawn(position, 256, radius);
         };
-        gameEvents.on('beam:hit', onHit);
-        return () => gameEvents.off('beam:hit', onHit);
+        gameEvents.on('beacon:approach', onApproach);
+        return () => gameEvents.off('beacon:approach', onApproach);
     }, [spawn]);
 
     if (isLoading || !lodBuffers.length || !vatData) return null
