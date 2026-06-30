@@ -1,4 +1,4 @@
-import { Environment, PerformanceMonitor, useGLTF } from "@react-three/drei";
+import { PerformanceMonitor, useGLTF } from "@react-three/drei";
 import { LevaWrapper } from "@core";
 import { Canvas, useLoader } from "@react-three/fiber";
 import { useEffect, Suspense, useMemo, useState } from "react";
@@ -13,6 +13,7 @@ import { UI } from "../ui/UI";
 import { preloadVATAssets } from "../components/Rose/core";
 import { WorldController } from "../components/WorldController";
 import { NorthStar, CharacterShadow } from "../components/background/Background";
+import { HDREnvironment } from "../components/HDREnvironment";
 // HorizonHalo intentionally not rendered (see scene mount below). Leaving the
 // import out so the bundler tree-shakes the module entirely.
 // import { HorizonHalo } from "../components/background/HorizonHalo";
@@ -171,9 +172,9 @@ export default function App({ config }: AppProps) {
                              ~90u halo ring sits squarely inside the fade. */}
                         <fog attach="fog" args={['#070B1D', 30, 110]} />
                         <CameraViewControl />
-                        <Environment
+                        <HDREnvironment
                             files="/textures/potsdamer_platz_1k_nb.hdr"
-                            environmentIntensity={0.5}
+                            intensity={0.5}
                         />
                         <ambientLight intensity={0.3} color="#0E1428" />
                         <DirectionalLight />
