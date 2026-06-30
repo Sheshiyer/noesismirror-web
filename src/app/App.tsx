@@ -12,7 +12,8 @@ import { DeviceDetector } from "../core/utils/DeviceDetector";
 import { UI } from "../ui/UI";
 import { preloadVATAssets } from "../components/Rose/core";
 import { WorldController } from "../components/WorldController";
-import { NorthStar } from "../components/background/Background";
+import { NorthStar, CharacterShadow } from "../components/background/Background";
+import { HorizonHalo } from "../components/background/HorizonHalo";
 import { createContext } from "react";
 import * as THREE from "three/webgpu";
 import { KeyboardMapper } from "@core";
@@ -109,14 +110,22 @@ export default function App({ config }: AppProps) {
                     position: [20, 20, 30]
                 }}
                 gl={(canvas) => {
+                    // TP2-027: Disable MSAA on low quality, keep on high.
+                    const quality = useGameStore.getState().quality;
                     const renderer = new WebGPURenderer({
                         ...canvas as any,
                         powerPreference: "high-performance",
-                        antialias: true,
+                        antialias: quality !== 'low',
                         alpha: true,
                     });
                     renderer.setClearColor('#000000');
                     renderer.autoClear = true;
+                    // TP2-013: ACES Filmic tone mapping for cinematic falloff.
+                    //   Replaces the default (Reinhard-like) curve so Sacred-
+                    //   Gold highlights and Coherence-Emerald glows don't
+                    //   clip to white. Exposure 1.1 lifts midtones slightly.
+                    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+                    renderer.toneMappingExposure = 1.1;
                     // renderer.inspector = new Inspector();
                     renderer.sortObjects = false;
 
@@ -147,6 +156,12 @@ export default function App({ config }: AppProps) {
 
                     <Suspense fallback={null}>
                         <color attach="background" args={['#000000']} />
+                        {/* TP2-003/009/012: Void-Black distance fog.
+                             Linear falloff from 30 to 110 world units fades
+                             the field boundary into darkness and merges with
+                             the horizon halo. Chosen linear over exp2 so the
+                             ~90u halo ring sits squarely inside the fade. */}
+                        <fog attach="fog" args={['#070B1D', 30, 110]} />
                         <CameraViewControl />
                         <Environment
                             files="/textures/potsdamer_platz_1k_nb.hdr"
@@ -156,6 +171,10 @@ export default function App({ config }: AppProps) {
                         <DirectionalLight />
                         {/* TP2-005: North star above spawn */}
                         <NorthStar />
+                        {/* TP2-001: Coherence-Emerald horizon halo */}
+                        <HorizonHalo />
+                        {/* TP2-007: Emerald contact shadow under character */}
+                        <CharacterShadow />
                         <Effects />
                     </Suspense>
                 </BeamSceneContext.Provider>

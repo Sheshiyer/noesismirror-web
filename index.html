@@ -5,8 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0, viewport-fit=cover">
     <link rel="preconnect" href="https://api.fontshare.com" crossorigin>
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- TP1-024 — preload Panchang + Satoshi subsets so the first paint already has display + sans -->
+    <link rel="preload" as="style" href="https://api.fontshare.com/v2/css?f[]=panchang@400,500,600,700,800&f[]=satoshi@300,400,500,700&display=swap">
+    <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=panchang@400,500,600,700,800&f[]=satoshi@300,400,500,700&display=swap">
     <link rel="icon" href="textures/favicon.png" type="image/png">
     <title>TRYAMBAKAM NOESIS — Self-Consciousness as Technology</title>
+    <!-- TP1-030 — Open Graph card for share previews -->
+    <meta property="og:title" content="Tryambakam Noesis — Self-Consciousness as Technology">
+    <meta property="og:description" content="A private 3D memory palace for witness premium packs.">
+    <meta property="og:image" content="/brand-logo.svg">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://314.tryambakam.space">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Tryambakam Noesis — Self-Consciousness as Technology">
+    <meta name="twitter:description" content="A private 3D memory palace for witness premium packs.">
+    <meta name="twitter:image" content="/brand-logo.svg">
 </head>
 <body>
     <div id="root"></div>

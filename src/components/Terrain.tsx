@@ -3,6 +3,7 @@ import { useMemo, useRef } from 'react'
 import { useThree } from '@react-three/fiber'
 import {
     Fn,
+    vec2,
     vec3,
     vec4,
     float,
@@ -10,11 +11,23 @@ import {
     modelWorldMatrix,
     step,
     length,
+    mix,
+    fract,
+    sin,
+    dot,
+    smoothstep,
 } from 'three/tsl'
 import { DEFAULT_GRASS_AREA_SIZE } from './grass/core/config'
 import { getTerrainHeight } from '../core/shaders/terrainHelpers'
 import { uTerrainAmp, uTerrainFreq, uTerrainSeed, uTerrainColor } from '../core/shaders/uniforms'
 import { useGridSnapping } from '../core/utils/gridSnapping'
+
+// TP2-002 Brand palette for terrain base color.
+//   Parchment desaturated (#A89E88) is the dominant tone — replaces the
+//   previous near-black/blue. Coherence-Emerald (#10B5A7) is sprinkled in
+//   via a cheap hash speckle to suggest moss/coherent threads.
+const PARCHMENT = vec3(0xA8 / 255, 0x9E / 255, 0x88 / 255)
+const EMERALD = vec3(0x10 / 255, 0xB5 / 255, 0xA7 / 255)
 
 
 export function Terrain({
@@ -47,7 +60,22 @@ export function Terrain({
 
         const mat = new THREE.MeshBasicNodeMaterial()
         mat.side = THREE.DoubleSide
-        mat.colorNode = vec4(uTerrainColor, float(1.0))
+
+        // TP2-002: Parchment base with sparse emerald speckle.
+        //   - Hash on world XZ gives a stable per-fragment pseudo-random.
+        //   - smoothstep gates ~5% of fragments to receive emerald tint.
+        //   - uTerrainColor (leva override) is mixed in additively so dialing
+        //     a non-black value in the debug panel still shifts the look.
+        mat.colorNode = Fn(() => {
+            const worldXZ = modelWorldMatrix.mul(vec4(positionLocal, float(1.0))).xz
+            // Classic 2D hash (Brian Sharpe / GPU Gems style).
+            const hash = fract(sin(dot(worldXZ, vec2(12.9898, 78.233))).mul(43758.5453))
+            const speckle = smoothstep(float(0.95), float(0.985), hash)
+            const base = mix(PARCHMENT, EMERALD, speckle.mul(0.45))
+            // uTerrainColor defaults to (0,0,0); leva can override.
+            const tinted = base.add(uTerrainColor)
+            return vec4(tinted, float(1.0))
+        })()
         mat.alphaTest = 0.5
 
         mat.positionNode = Fn(() => {

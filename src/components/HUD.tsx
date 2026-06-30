@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import type { Beacon } from '../types/world';
-import { useGameStore } from '../core/store/gameStore';
+import { useGameStore, type Quality } from '../core/store/gameStore';
 import { useAudioStore } from '../core/store/audioStore';
 import { useVisitedStore } from '../core/store/visitedStore';
+import { API_URL } from '../config';
 import { signOut } from './TokenHandler';
+import Settings from './Settings';
 
 export interface HUDProps {
   personId: string;
@@ -52,29 +54,110 @@ const HELP_ROWS: HelpRow[] = [
   { key: 'M', label: 'Mute · unmute' },
   { key: 'P', label: 'Pause · resume' },
   { key: 'H', label: 'Toggle this help' },
+  { key: 'Q', label: 'Cycle quality' },
+  { key: 'B', label: 'Toggle mini-map' },
+  { key: 'F', label: 'Toggle FPS' },
+  { key: 'V', label: 'Visited beacons' },
+  { key: 'S', label: 'Settings' },
 ];
 
 const HIDE_AFTER_MS = 5000;
 const FIELD_BANNER_MS = 4000;
+const TOAST_MS = 1000;
+const HEALTH_POLL_MS = 30_000;
+const SLOW_HEALTH_MS = 1000;
+
+// TP8-005 — mini-map sampling: assumes character is at origin in world
+// space; beacons map by their (x, z) into a square viewport. The half-extent
+// determines how far you can "see" — large enough to fit a typical layout.
+const MAP_PIXELS = 120;
+const MAP_HALF_EXTENT = 60;
+
+type HealthStatus = 'ok' | 'slow' | 'fail' | 'unknown';
+
+const QUALITY_ORDER: Quality[] = ['low', 'medium', 'high'];
+const nextQuality = (q: Quality): Quality =>
+  QUALITY_ORDER[(QUALITY_ORDER.indexOf(q) + 1) % QUALITY_ORDER.length];
+
+// Cycle null -> false -> true -> null so the toast reads as a deliberate walk
+// through the three states.
+function nextReducedMotion(cur: boolean | null): boolean | null {
+  if (cur === null) return false;
+  if (cur === false) return true;
+  return null;
+}
+
+function reducedMotionLabel(v: boolean | null): string {
+  if (v === null) return 'AUTO';
+  return v ? 'ON' : 'OFF';
+}
 
 export default function HUD({ personId, personName, beacons }: HUDProps) {
   const navigate = useNavigate();
+
+  // ===== Store wiring =====
   const hudVisible = useGameStore((s) => s.hudVisible);
   const setHudVisible = useGameStore((s) => s.setHudVisible);
+  const characterRef = useGameStore((s) => s.characterRef);
+
+  const quality = useGameStore((s) => s.quality);
+  const setQuality = useGameStore((s) => s.setQuality);
+
+  const reducedMotionPref = useGameStore((s) => s.reducedMotionPref);
+  const setReducedMotionPref = useGameStore((s) => s.setReducedMotionPref);
+
+  const showFps = useGameStore((s) => s.showFps);
+  const toggleFps = useGameStore((s) => s.toggleFps);
+
+  const miniMapOpen = useGameStore((s) => s.miniMapOpen);
+  const toggleMiniMap = useGameStore((s) => s.toggleMiniMap);
+
+  const settingsOpen = useGameStore((s) => s.settingsOpen);
+  const setSettingsOpen = useGameStore((s) => s.setSettingsOpen);
+
   const muted = useAudioStore((s) => s.muted);
+  const audioContextStarted = useAudioStore((s) => s.audioContextStarted);
   const toggleMute = useAudioStore((s) => s.toggleMute);
+
   const visitedSet = useVisitedStore((s) => s.getVisited(personId));
 
+  // ===== Local UI state =====
   const [paused, setPaused] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [bannerVisible, setBannerVisible] = useState(true);
+  const [visitedListOpen, setVisitedListOpen] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const [fps, setFps] = useState(0);
+  const [health, setHealth] = useState<HealthStatus>('unknown');
+  const [compassYaw, setCompassYaw] = useState(0);
 
   const hideTimerRef = useRef<number | null>(null);
   const bannerTimerRef = useRef<number | null>(null);
+  const toastTimerRef = useRef<number | null>(null);
+  const visitTsRef = useRef<Map<string, number>>(new Map());
 
   const token =
     typeof window !== 'undefined' ? window.localStorage.getItem('noesis_token') : null;
   const userEmail = useMemo(() => decodeEmailFromToken(token), [token]);
+
+  // Stamp newly-visited beacon ids so the V-panel can show a relative time.
+  useEffect(() => {
+    visitedSet.forEach((id) => {
+      if (!visitTsRef.current.has(id)) {
+        visitTsRef.current.set(id, Date.now());
+      }
+    });
+  }, [visitedSet]);
+
+  const showToast = useCallback((msg: string) => {
+    setToast(msg);
+    if (toastTimerRef.current !== null) {
+      window.clearTimeout(toastTimerRef.current);
+    }
+    toastTimerRef.current = window.setTimeout(() => {
+      setToast(null);
+    }, TOAST_MS);
+  }, []);
 
   // TP8-019 — auto-hide tracking. Reveal HUD on any input, then start a 5s
   // timer to hide it again. Pause/help overlays force HUD visible.
@@ -98,7 +181,6 @@ export default function HUD({ personId, personName, beacons }: HUDProps) {
     const onKey = () => revealHud();
     window.addEventListener('mousemove', onMove);
     window.addEventListener('keydown', onKey);
-    // Start with HUD visible + timer armed.
     revealHud();
     return () => {
       window.removeEventListener('mousemove', onMove);
@@ -109,12 +191,10 @@ export default function HUD({ personId, personName, beacons }: HUDProps) {
     };
   }, [revealHud]);
 
-  // TP8-011 / TP8-012 / TP8-013 — global keybindings owned by the HUD.
-  // ESC closes pause + help; pressing the same opener key again toggles off.
+  // TP8-011/012/013 + TP8-005..010, TP8-014, TP8-016 — global keybindings.
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const onKey = (event: KeyboardEvent) => {
-      // Ignore key events when the user is typing into an input/textarea.
       const target = event.target as HTMLElement | null;
       if (
         target &&
@@ -125,6 +205,17 @@ export default function HUD({ personId, personName, beacons }: HUDProps) {
         return;
       }
       const key = event.key.toLowerCase();
+
+      // Shift+R cycles reduced-motion preference. Check before single 'r' or
+      // any plain-key paths to avoid swallowing.
+      if (event.shiftKey && key === 'r') {
+        event.preventDefault();
+        const next = nextReducedMotion(reducedMotionPref);
+        setReducedMotionPref(next);
+        showToast(`REDUCED MOTION: ${reducedMotionLabel(next)}`);
+        return;
+      }
+
       if (key === 'p') {
         event.preventDefault();
         setPaused((p) => !p);
@@ -134,6 +225,23 @@ export default function HUD({ personId, personName, beacons }: HUDProps) {
       } else if (key === 'm') {
         event.preventDefault();
         toggleMute();
+      } else if (key === 'b') {
+        event.preventDefault();
+        toggleMiniMap();
+      } else if (key === 'f') {
+        event.preventDefault();
+        toggleFps();
+      } else if (key === 'q') {
+        event.preventDefault();
+        const next = nextQuality(quality);
+        setQuality(next);
+        showToast(`QUALITY: ${next.toUpperCase()}`);
+      } else if (key === 's') {
+        event.preventDefault();
+        setSettingsOpen(!settingsOpen);
+      } else if (key === 'v') {
+        event.preventDefault();
+        setVisitedListOpen((o) => !o);
       } else if (key === 'escape') {
         if (paused) {
           event.preventDefault();
@@ -143,11 +251,30 @@ export default function HUD({ personId, personName, beacons }: HUDProps) {
           event.preventDefault();
           setHelpOpen(false);
         }
+        if (visitedListOpen) {
+          event.preventDefault();
+          setVisitedListOpen(false);
+        }
+        // Settings handles its own ESC; don't double-handle.
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [paused, helpOpen, toggleMute]);
+  }, [
+    paused,
+    helpOpen,
+    visitedListOpen,
+    settingsOpen,
+    quality,
+    reducedMotionPref,
+    setQuality,
+    setReducedMotionPref,
+    toggleMute,
+    toggleMiniMap,
+    toggleFps,
+    setSettingsOpen,
+    showToast,
+  ]);
 
   // TP8-028 — field-name banner fades after 4s. State is local to this mount.
   useEffect(() => {
@@ -162,22 +289,125 @@ export default function HUD({ personId, personName, beacons }: HUDProps) {
     };
   }, []);
 
+  // TP8-006 — compass yaw poll. Reads characterRef.rotation.y once per
+  // animation frame. Cheap enough to be fine even when the compass would be
+  // hidden — kept always-on so the value is fresh when it appears.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    let raf = 0;
+    const tick = () => {
+      const ref = characterRef?.current;
+      if (ref) {
+        setCompassYaw(ref.rotation.y);
+      }
+      raf = window.requestAnimationFrame(tick);
+    };
+    raf = window.requestAnimationFrame(tick);
+    return () => window.cancelAnimationFrame(raf);
+  }, [characterRef]);
+
+  // TP8-008 — FPS counter. Only measures when `showFps` is true to keep the
+  // off-state truly zero-cost.
+  useEffect(() => {
+    if (!showFps || typeof window === 'undefined') return;
+    let raf = 0;
+    let frames = 0;
+    let last = performance.now();
+    const tick = () => {
+      frames++;
+      const now = performance.now();
+      if (now - last >= 500) {
+        setFps(Math.round((frames * 1000) / (now - last)));
+        frames = 0;
+        last = now;
+      }
+      raf = window.requestAnimationFrame(tick);
+    };
+    raf = window.requestAnimationFrame(tick);
+    return () => window.cancelAnimationFrame(raf);
+  }, [showFps]);
+
+  // TP8-025 — connection status poll. Treats abort/non-200 as fail; latency
+  // over SLOW_HEALTH_MS as slow.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    let cancelled = false;
+    const probe = async () => {
+      const started = performance.now();
+      try {
+        const ctrl = new AbortController();
+        const timeout = window.setTimeout(() => ctrl.abort(), 5000);
+        const res = await fetch(`${API_URL}/api/health`, { signal: ctrl.signal });
+        window.clearTimeout(timeout);
+        const elapsed = performance.now() - started;
+        if (cancelled) return;
+        if (!res.ok) setHealth('fail');
+        else if (elapsed > SLOW_HEALTH_MS) setHealth('slow');
+        else setHealth('ok');
+      } catch {
+        if (!cancelled) setHealth('fail');
+      }
+    };
+    void probe();
+    const id = window.setInterval(probe, HEALTH_POLL_MS);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, []);
+
   const handleSignOut = useCallback(() => {
     try {
       signOut(navigate);
     } catch {
-      // Fallback path in case signOut signature changes.
       window.localStorage.removeItem('noesis_token');
       navigate('/');
     }
   }, [navigate]);
 
-  // When an overlay is up we force-show the HUD so the user can read it.
   const effectiveVisible = hudVisible || paused || helpOpen;
 
   const visitedCount = visitedSet.size;
   const beaconTotal = beacons.length;
   const fieldLabel = (personName ?? personId).toUpperCase();
+
+  // ===== Mini-map dots =====
+  const mapDots = useMemo(() => {
+    const half = MAP_PIXELS / 2;
+    return beacons.map((b) => {
+      const nx = Math.max(-1, Math.min(1, b.position.x / MAP_HALF_EXTENT));
+      const nz = Math.max(-1, Math.min(1, b.position.z / MAP_HALF_EXTENT));
+      return {
+        id: b.id,
+        cx: half + nx * half,
+        cy: half + nz * half,
+        visited: visitedSet.has(b.id),
+      };
+    });
+  }, [beacons, visitedSet]);
+
+  const audioActive = audioContextStarted && !muted;
+
+  const healthColor: Record<HealthStatus, string> = {
+    ok: 'bg-noesis-emerald',
+    slow: 'bg-noesis-gold',
+    fail: 'bg-red-500',
+    unknown: 'bg-noesis-parchment/30',
+  };
+  const healthLabel: Record<HealthStatus, string> = {
+    ok: 'Connection healthy',
+    slow: 'Connection slow',
+    fail: 'Connection failed',
+    unknown: 'Connection unknown',
+  };
+
+  // Sort visited beacons in the V panel by visit timestamp (latest first).
+  const visitedRows = useMemo(() => {
+    return beacons
+      .filter((b) => visitedSet.has(b.id))
+      .map((b) => ({ beacon: b, ts: visitTsRef.current.get(b.id) ?? 0 }))
+      .sort((a, b) => b.ts - a.ts);
+  }, [beacons, visitedSet]);
 
   return (
     <div
@@ -201,7 +431,7 @@ export default function HUD({ personId, personName, beacons }: HUDProps) {
         </Link>
       </div>
 
-      {/* TP8-002 — Session chip top-right (email + sign-out) */}
+      {/* TP8-002 — Session chip top-right + audio dot + connection dot */}
       <header className="pointer-events-auto absolute top-4 right-6 flex items-center gap-4 font-mono text-xs text-noesis-parchment/60">
         {userEmail && <span>{userEmail}</span>}
         <button
@@ -220,7 +450,134 @@ export default function HUD({ personId, personName, beacons }: HUDProps) {
             ♪
           </span>
         )}
+        {/* TP8-007 — Audio indicator dot */}
+        <span
+          aria-label={audioActive ? 'Audio active' : 'Audio inactive'}
+          title={audioActive ? 'Audio active' : 'Audio inactive'}
+          className={`inline-block h-2 w-2 rounded-full ${
+            audioActive
+              ? 'bg-noesis-emerald motion-safe:animate-pulse'
+              : 'bg-noesis-parchment/20'
+          }`}
+        />
       </header>
+
+      {/* TP8-006 — Compass top-center (small N/E/S/W rose) */}
+      <div className="pointer-events-none absolute top-16 left-1/2 -translate-x-1/2">
+        <svg
+          width={60}
+          height={60}
+          viewBox="0 0 60 60"
+          xmlns="http://www.w3.org/2000/svg"
+          aria-label="Compass"
+          role="img"
+        >
+          <g transform={`rotate(${-(compassYaw * 180) / Math.PI} 30 30)`}>
+            <circle
+              cx={30}
+              cy={30}
+              r={24}
+              fill="none"
+              stroke="#C5A017"
+              strokeOpacity={0.3}
+              strokeWidth={1}
+            />
+            <text
+              x={30}
+              y={12}
+              fill="#C5A017"
+              fontFamily="SF Mono, ui-monospace, monospace"
+              fontSize={9}
+              textAnchor="middle"
+            >
+              N
+            </text>
+            <text
+              x={52}
+              y={33}
+              fill="#F0EDE3"
+              fillOpacity={0.5}
+              fontFamily="SF Mono, ui-monospace, monospace"
+              fontSize={8}
+              textAnchor="middle"
+            >
+              E
+            </text>
+            <text
+              x={30}
+              y={54}
+              fill="#F0EDE3"
+              fillOpacity={0.5}
+              fontFamily="SF Mono, ui-monospace, monospace"
+              fontSize={8}
+              textAnchor="middle"
+            >
+              S
+            </text>
+            <text
+              x={8}
+              y={33}
+              fill="#F0EDE3"
+              fillOpacity={0.5}
+              fontFamily="SF Mono, ui-monospace, monospace"
+              fontSize={8}
+              textAnchor="middle"
+            >
+              W
+            </text>
+          </g>
+        </svg>
+      </div>
+
+      {/* TP8-005 — Mini-map (toggle with B) */}
+      {miniMapOpen && (
+        <aside
+          role="complementary"
+          aria-label="Mini map"
+          className="pointer-events-none absolute top-32 right-6 border border-noesis-gold/40 bg-noesis-void/60 p-2"
+        >
+          <svg
+            width={MAP_PIXELS}
+            height={MAP_PIXELS}
+            viewBox={`0 0 ${MAP_PIXELS} ${MAP_PIXELS}`}
+            xmlns="http://www.w3.org/2000/svg"
+            aria-label="Beacon map"
+            role="img"
+          >
+            <rect
+              x={0}
+              y={0}
+              width={MAP_PIXELS}
+              height={MAP_PIXELS}
+              fill="none"
+              stroke="#C5A017"
+              strokeOpacity={0.2}
+            />
+            {mapDots.map((d) => (
+              <circle
+                key={d.id}
+                cx={d.cx}
+                cy={d.cy}
+                r={3}
+                fill={d.visited ? '#C5A017' : '#10B5A7'}
+                opacity={d.visited ? 1 : 0.7}
+              />
+            ))}
+            {/* Character marker at center */}
+            <circle
+              cx={MAP_PIXELS / 2}
+              cy={MAP_PIXELS / 2}
+              r={4}
+              fill="#F0EDE3"
+              stroke="#070B1D"
+              strokeWidth={1}
+            />
+          </svg>
+          <div className="mt-1 text-center font-mono text-[8px] uppercase tracking-[0.25em] text-noesis-parchment/40">
+            B · map
+          </div>
+        </aside>
+      )}
 
       {/* TP8-028 — Faint field-name banner top-center */}
       {bannerVisible && (
@@ -241,10 +598,36 @@ export default function HUD({ personId, personName, beacons }: HUDProps) {
         ))}
       </div>
 
-      {/* TP8-004 — Progress chip bottom-right */}
-      <div className="pointer-events-none absolute bottom-6 right-6 font-mono uppercase tracking-[0.25em] text-[10px] text-noesis-parchment/70">
-        {visitedCount} of {beaconTotal} mirrors observed
+      {/* TP8-008 — FPS counter bottom-left */}
+      {showFps && (
+        <div className="pointer-events-none absolute bottom-6 left-6 font-mono text-xs text-noesis-parchment/40">
+          {fps} FPS
+        </div>
+      )}
+
+      {/* TP8-004 — Progress chip bottom-right + connection status dot */}
+      <div className="pointer-events-none absolute bottom-6 right-6 flex items-center gap-3 font-mono uppercase tracking-[0.25em] text-[10px] text-noesis-parchment/70">
+        <span>
+          {visitedCount} of {beaconTotal} mirrors observed
+        </span>
+        {/* TP8-025 — Connection status */}
+        <span
+          aria-label={healthLabel[health]}
+          title={healthLabel[health]}
+          className={`inline-block h-2 w-2 rounded-full ${healthColor[health]}`}
+        />
       </div>
+
+      {/* TP8-009 / TP8-010 — Quality / reduced-motion toast */}
+      {toast && (
+        <div
+          className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 font-mono text-3xl uppercase tracking-[0.3em] text-noesis-gold motion-safe:animate-pulse"
+          role="status"
+          aria-live="polite"
+        >
+          {toast}
+        </div>
+      )}
 
       {/* TP8-011 — Pause overlay */}
       {paused && (
@@ -296,6 +679,54 @@ export default function HUD({ personId, personName, beacons }: HUDProps) {
           </div>
         </div>
       )}
+
+      {/* TP8-016 — Visited beacons side panel (V) */}
+      {visitedListOpen && (
+        <aside
+          role="complementary"
+          aria-label="Visited beacons"
+          className="pointer-events-auto fixed top-1/2 right-6 z-30 w-80 max-w-[80vw] -translate-y-1/2 border border-noesis-gold/40 bg-noesis-void/90 p-6"
+        >
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="font-display text-xl tracking-[0.3em] text-noesis-gold">
+              VISITED
+            </h2>
+            <button
+              type="button"
+              onClick={() => setVisitedListOpen(false)}
+              aria-label="Close visited list"
+              className="font-mono text-xl leading-none text-noesis-gold hover:text-noesis-parchment focus-visible:outline-none"
+            >
+              ×
+            </button>
+          </div>
+          {visitedRows.length === 0 ? (
+            <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-noesis-parchment/50">
+              No mirrors observed yet.
+            </p>
+          ) : (
+            <ul className="space-y-2 text-noesis-parchment/80">
+              {visitedRows.map(({ beacon, ts }) => (
+                <li
+                  key={beacon.id}
+                  className="flex items-baseline justify-between gap-3 font-mono text-[10px] uppercase tracking-[0.2em]"
+                >
+                  <span className="truncate text-noesis-gold">{beacon.label}</span>
+                  <span className="shrink-0 text-noesis-parchment/40">
+                    {ts ? new Date(ts).toLocaleTimeString() : '—'}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="mt-6 text-center font-mono text-[10px] uppercase tracking-[0.3em] text-noesis-parchment/40">
+            press V or ESC to close
+          </p>
+        </aside>
+      )}
+
+      {/* TP8-014 — Settings drawer (S) */}
+      <Settings />
     </div>
   );
 }

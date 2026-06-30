@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import AssetViewer from '../components/AssetViewer';
 import type { Beacon } from '../types/world';
 
@@ -25,22 +25,23 @@ describe('AssetViewer', () => {
     expect(document.activeElement).toBe(screen.getByLabelText('Close'));
   });
 
-  it('calls onClose when close button clicked', () => {
+  it('calls onClose when close button clicked', async () => {
     const onClose = vi.fn();
     render(
       <AssetViewer beacon={readingBeacon} onClose={onClose} reducedMotion={false} />
     );
     fireEvent.click(screen.getByLabelText('Close'));
-    expect(onClose).toHaveBeenCalledTimes(1);
+    // TP4-002 — onClose fires after the 200ms exit animation
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1), { timeout: 500 });
   });
 
-  it('calls onClose on Escape key', () => {
+  it('calls onClose on Escape key', async () => {
     const onClose = vi.fn();
     render(
       <AssetViewer beacon={readingBeacon} onClose={onClose} reducedMotion={false} />
     );
     fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
-    expect(onClose).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1), { timeout: 500 });
   });
 
   it('renders fallback for unsupported beacon type', () => {

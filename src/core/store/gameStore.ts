@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { Group } from 'three';
 import { AudioListener } from 'three/webgpu';
 import * as THREE from 'three/webgpu';
@@ -9,12 +10,14 @@ export enum CameraMode {
   Detached = 2,
 }
 
+export type Quality = 'low' | 'medium' | 'high';
+
 interface GameState {
   // ===== Camera State =====
   cameraMode: CameraMode;
   setCameraMode: (mode: CameraMode) => void;
   toggleCameraMode: () => void;
-  
+
   // ===== Character State =====
   characterRef: React.MutableRefObject<Group | null> | null;
   setCharacterRef: (ref: React.MutableRefObject<Group | null> | null) => void;
@@ -39,10 +42,27 @@ interface GameState {
   isMobile: boolean;
   setIsMobile: (isMobile: boolean) => void;
 
-  quality: 'low' | 'high';
+  // ===== Quality / Display Prefs (extended for TP8 P1) =====
+  // Quality is tri-state ('low' | 'medium' | 'high') — legacy 'high'/'low'
+  // checks continue to work; new 'medium' surfaces in Settings + Q cycle.
+  quality: Quality;
+  setQuality: (q: Quality) => void;
   toggleQuality: () => void;
 
-  isControlEnabled: boolean; 
+  // null = auto-detect via prefers-reduced-motion media query, true/false = explicit override.
+  reducedMotionPref: boolean | null;
+  setReducedMotionPref: (b: boolean | null) => void;
+
+  showFps: boolean;
+  toggleFps: () => void;
+
+  miniMapOpen: boolean;
+  toggleMiniMap: () => void;
+
+  settingsOpen: boolean;
+  setSettingsOpen: (b: boolean) => void;
+
+  isControlEnabled: boolean;
   setControlEnabled: (enabled: boolean) => void;
 
   // ===== WebGPU State =====
@@ -86,64 +106,113 @@ const initialOnboardingPhase: OnboardingPhase = (() => {
   }
 })();
 
-export const useGameStore = create<GameState>((set, get) => ({
-  // ===== Camera State =====
-  cameraMode: CameraMode.Follow,
-  setCameraMode: (mode) => set({ cameraMode: mode }),
-  toggleCameraMode: () => set((state) => ({
-    cameraMode: (state.cameraMode + 1) % 3
-  })),
-  
-  // ===== Character State =====
-  characterRef: null,
-  setCharacterRef: (ref) => set({ characterRef: ref }),
+// Storage shim so persist hydration doesn't crash in test/SSR envs.
+// Mirrors the pattern used by visitedStore + audioStore.
+const memoryStorage: Storage = {
+  length: 0,
+  clear: () => {},
+  getItem: () => null,
+  key: () => null,
+  removeItem: () => {},
+  setItem: () => {},
+};
+const safeStorage = () =>
+  typeof window !== 'undefined' && window.localStorage ? window.localStorage : memoryStorage;
 
-  activeTargets: [],
-  setActiveTargets: (targets) => set({ activeTargets: targets }),
+export const useGameStore = create<GameState>()(
+  persist(
+    (set, get) => ({
+      // ===== Camera State =====
+      cameraMode: CameraMode.Follow,
+      setCameraMode: (mode) => set({ cameraMode: mode }),
+      toggleCameraMode: () => set((state) => ({
+        cameraMode: (state.cameraMode + 1) % 3
+      })),
 
-  readyStatus: {},
-  setComponentReady: (id, isReady) => set((state) => ({
-    readyStatus: { ...state.readyStatus, [id]: isReady }
-  })),
+      // ===== Character State =====
+      characterRef: null,
+      setCharacterRef: (ref) => set({ characterRef: ref }),
 
-  isSceneReady: () => {
-    const { activeTargets, readyStatus } = get();
-    if (activeTargets.length === 0) return false;
-    return activeTargets.every((target) => readyStatus[target] === true);
-  },
+      activeTargets: [],
+      setActiveTargets: (targets) => set({ activeTargets: targets }),
 
-  isGameStarted: false,
-  setIsGameStarted: (loaded) => set({ isGameStarted: loaded }),
+      readyStatus: {},
+      setComponentReady: (id, isReady) => set((state) => ({
+        readyStatus: { ...state.readyStatus, [id]: isReady }
+      })),
 
-  isSoundOn: false,
-  setIsSoundOn: (isSoundOn) => set({ isSoundOn: isSoundOn }),
+      isSceneReady: () => {
+        const { activeTargets, readyStatus } = get();
+        if (activeTargets.length === 0) return false;
+        return activeTargets.every((target) => readyStatus[target] === true);
+      },
 
-  audioListener: null,
-  setAudioListener: (listener) => set({ audioListener: listener }),
+      isGameStarted: false,
+      setIsGameStarted: (loaded) => set({ isGameStarted: loaded }),
 
-  isMobile: false,
-  setIsMobile: (isMobile) => set({ isMobile: isMobile }),
+      isSoundOn: false,
+      setIsSoundOn: (isSoundOn) => set({ isSoundOn: isSoundOn }),
 
-  quality: 'high',
-  toggleQuality: () => set((state) => ({ quality: state.quality === 'high' ? 'low' : 'high' })),
+      audioListener: null,
+      setAudioListener: (listener) => set({ audioListener: listener }),
 
-  isControlEnabled: false,
-  setControlEnabled: (enabled) => set({ isControlEnabled: enabled }),
+      isMobile: false,
+      setIsMobile: (isMobile) => set({ isMobile: isMobile }),
 
-  // ===== WebGPU State =====
-  gpuError: null,
-  setGpuError: (error) => set({ gpuError: error }),
+      // ===== Quality / Display Prefs =====
+      quality: 'high',
+      setQuality: (q) => set({ quality: q }),
+      // Legacy two-state toggle preserved — cycles between 'high' <-> 'low'.
+      // New code should prefer setQuality. The Q-key cycle in HUD walks
+      // through low → medium → high.
+      toggleQuality: () => set((state) => ({
+        quality: state.quality === 'high' ? 'low' : 'high'
+      })),
 
-  // ===== Modal / Audio Ducking State =====
-  modalOpen: false,
-  duckAudio: 1,
-  setModalOpen: (open) => set({ modalOpen: open, duckAudio: open ? 0.15 : 1 }),
+      reducedMotionPref: null,
+      setReducedMotionPref: (b) => set({ reducedMotionPref: b }),
 
-  // ===== Onboarding State (TP7) =====
-  onboardingPhase: initialOnboardingPhase,
-  setOnboardingPhase: (p) => set({ onboardingPhase: p }),
+      showFps: false,
+      toggleFps: () => set((state) => ({ showFps: !state.showFps })),
 
-  // ===== HUD State (TP8) =====
-  hudVisible: true,
-  setHudVisible: (b) => set({ hudVisible: b }),
-}));
+      miniMapOpen: false,
+      toggleMiniMap: () => set((state) => ({ miniMapOpen: !state.miniMapOpen })),
+
+      settingsOpen: false,
+      setSettingsOpen: (b) => set({ settingsOpen: b }),
+
+      isControlEnabled: false,
+      setControlEnabled: (enabled) => set({ isControlEnabled: enabled }),
+
+      // ===== WebGPU State =====
+      gpuError: null,
+      setGpuError: (error) => set({ gpuError: error }),
+
+      // ===== Modal / Audio Ducking State =====
+      modalOpen: false,
+      duckAudio: 1,
+      setModalOpen: (open) => set({ modalOpen: open, duckAudio: open ? 0.15 : 1 }),
+
+      // ===== Onboarding State (TP7) =====
+      onboardingPhase: initialOnboardingPhase,
+      setOnboardingPhase: (p) => set({ onboardingPhase: p }),
+
+      // ===== HUD State (TP8) =====
+      hudVisible: true,
+      setHudVisible: (b) => set({ hudVisible: b }),
+    }),
+    {
+      name: 'noesis_game_prefs',
+      storage: createJSONStorage(safeStorage),
+      // Only persist user preferences. Ephemeral runtime state (modalOpen,
+      // duckAudio, audioListener, characterRef, ready status, etc.) must NOT
+      // hydrate from storage — it has to start clean each mount.
+      partialize: (state) => ({
+        quality: state.quality,
+        reducedMotionPref: state.reducedMotionPref,
+        showFps: state.showFps,
+        miniMapOpen: state.miniMapOpen,
+      }),
+    }
+  )
+);
