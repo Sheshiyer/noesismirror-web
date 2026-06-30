@@ -1,14 +1,19 @@
 /**
  * World Config Transformation
  * Shared utility for transforming R2 manifest files into world-config JSON.
+ *
+ * Output shape MUST match the frontend's src/types/world.ts Beacon/WorldConfig.
  */
 
-/** Asset entry for beacons */
+/** BeaconType — mirrors src/types/world.ts on the frontend. */
+export type BeaconType = 'reading' | 'audio' | 'video' | 'slides' | 'study';
+
+/** Asset entry for beacons — backend-internal source of truth for asset metadata. */
 export interface BeaconAsset {
   path: string;
-  type: 'audio' | 'image' | 'video' | 'document' | 'text' | 'mind-map';
-  title: string;
-  description?: string;
+  beaconType: BeaconType;
+  label: string;
+  summary: string;
 }
 
 /** Actual R2 manifest structure from premium-assets generator */
@@ -23,64 +28,52 @@ export interface Manifest {
   notebooklm?: Record<string, unknown>;
 }
 
-/** Beacon in the world-config */
+/** Beacon in the world-config — flat shape consumed by the React renderer. */
 export interface Beacon {
   id: string;
-  position: { x: number; y: number; z: number };
-  asset: {
-    path: string;
-    type: string;
-    title?: string;
-    description?: string;
-  };
+  label: string;
+  summary: string;
+  type: BeaconType;
+  position: { x: number; z: number };
+  assetUrl: string;
 }
 
-/** World-config structure returned to client */
+/** World-config structure returned to client. */
 export interface WorldConfig {
   personId: string;
   personName: string;
   beacons: Beacon[];
-  metadata: {
-    generatedAt: string;
-    assetCount: number;
-  };
 }
 
 /**
  * Known asset paths in the premium-assets structure.
- * These are derived from the directory structure created by the generator.
+ * Derived from the directory structure created by the generator.
+ * beaconType maps each asset onto the frontend's BeaconType enum.
  */
 export const KNOWN_ASSETS: BeaconAsset[] = [
-  { path: 'audio/deep-dive-long.mp3', type: 'audio', title: 'Deep Dive Audio', description: 'Comprehensive audio exploration' },
-  { path: 'video/video-brief.mp4', type: 'video', title: 'Video Brief', description: 'Visual introduction' },
-  { path: "mind-map/Harshita's Personal Companion Dossier.json", type: 'mind-map', title: 'Mind Map', description: 'Interactive knowledge map' },
-  { path: 'reports/briefing.md', type: 'document', title: 'Briefing Report', description: 'Executive summary' },
-  { path: 'reports/study-guide.md', type: 'document', title: 'Study Guide', description: 'Detailed learning material' },
-  { path: 'quiz/quiz.md', type: 'text', title: 'Quiz', description: 'Knowledge check' },
-  { path: 'flashcards/flashcards.md', type: 'text', title: 'Flashcards', description: 'Quick review cards' },
-  { path: 'slide-decks/detailed.pdf', type: 'document', title: 'Detailed Slides', description: 'Full presentation' },
-  { path: 'slide-decks/preview.pdf', type: 'document', title: 'Preview Slides', description: 'Quick overview presentation' },
-  { path: 'slide-decks/vimshottari-timeline.pdf', type: 'document', title: 'Vimshottari Timeline', description: 'Temporal analysis' },
+  { path: 'audio/deep-dive-long.mp3',                              beaconType: 'audio',   label: 'Deep Dive Audio',     summary: 'Comprehensive audio exploration' },
+  { path: 'video/video-brief.mp4',                                 beaconType: 'video',   label: 'Video Brief',         summary: 'Visual introduction' },
+  { path: "mind-map/Harshita's Personal Companion Dossier.json",   beaconType: 'study',   label: 'Mind Map',            summary: 'Interactive knowledge map' },
+  { path: 'reports/briefing.md',                                   beaconType: 'reading', label: 'Briefing Report',     summary: 'Executive summary' },
+  { path: 'reports/study-guide.md',                                beaconType: 'study',   label: 'Study Guide',         summary: 'Detailed learning material' },
+  { path: 'quiz/quiz.md',                                          beaconType: 'study',   label: 'Quiz',                summary: 'Knowledge check' },
+  { path: 'flashcards/flashcards.md',                              beaconType: 'study',   label: 'Flashcards',          summary: 'Quick review cards' },
+  { path: 'slide-decks/detailed.pdf',                              beaconType: 'slides',  label: 'Detailed Slides',     summary: 'Full presentation' },
+  { path: 'slide-decks/preview.pdf',                               beaconType: 'slides',  label: 'Preview Slides',      summary: 'Quick overview presentation' },
+  { path: 'slide-decks/vimshottari-timeline.pdf',                  beaconType: 'slides',  label: 'Vimshottari Timeline', summary: 'Temporal analysis' },
 ];
 
 /**
- * Generates beacon positions in a spiral pattern.
- * Creates visually interesting distribution for VR/3D environments.
+ * Generates beacon positions on a golden-angle spiral in the XZ plane.
+ * Y is intentionally omitted — the frontend renders on a 2D ground plane.
  */
-export function generateSpiralPosition(index: number, total: number): { x: number; y: number; z: number } {
-  const goldenAngle = Math.PI * (3 - Math.sqrt(5)); // ~137.5 degrees
-  const radius = 5 + (index / total) * 15; // Expanding radius from 5 to 20
+export function generateSpiralPosition(index: number, total: number): { x: number; z: number } {
+  const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+  const radius = 5 + (index / total) * 15;
   const angle = index * goldenAngle;
-
-  // Spiral in XZ plane with slight Y variation
-  const x = radius * Math.cos(angle);
-  const z = radius * Math.sin(angle);
-  const y = 1.5 + Math.sin(index * 0.5) * 0.5; // Gentle wave between 1-2 meters
-
   return {
-    x: Math.round(x * 100) / 100,
-    y: Math.round(y * 100) / 100,
-    z: Math.round(z * 100) / 100,
+    x: Math.round(radius * Math.cos(angle) * 100) / 100,
+    z: Math.round(radius * Math.sin(angle) * 100) / 100,
   };
 }
 
@@ -91,22 +84,16 @@ export function generateSpiralPosition(index: number, total: number): { x: numbe
 export function transformManifestToWorldConfig(manifest: Manifest): WorldConfig {
   const beacons: Beacon[] = KNOWN_ASSETS.map((asset, index) => ({
     id: `beacon-${index}`,
+    label: asset.label,
+    summary: asset.summary,
+    type: asset.beaconType,
     position: generateSpiralPosition(index, KNOWN_ASSETS.length),
-    asset: {
-      path: `/api/assets/${manifest.personId}/${asset.path}`,
-      type: asset.type,
-      title: asset.title,
-      description: asset.description,
-    },
+    assetUrl: `/api/assets/${manifest.personId}/${asset.path}`,
   }));
 
   return {
     personId: manifest.personId,
     personName: manifest.personName,
     beacons,
-    metadata: {
-      generatedAt: manifest.generatedAt,
-      assetCount: KNOWN_ASSETS.length,
-    },
   };
 }
