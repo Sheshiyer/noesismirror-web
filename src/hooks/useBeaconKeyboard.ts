@@ -22,7 +22,7 @@ export function useBeaconKeyboard({
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (viewerOpen) {
-        if (event.key === 'Escape') {
+        if (event.key === 'Escape' || event.key === 'g' || event.key === 'G') {
           event.preventDefault();
           onCloseViewer();
         }
@@ -50,7 +50,7 @@ export function useBeaconKeyboard({
         return;
       }
 
-      if (event.key === 'Enter' && activeBeaconId !== null) {
+      if ((event.key === 'g' || event.key === 'G' || event.key === 'Enter') && activeBeaconId !== null) {
         event.preventDefault();
         onOpen(activeBeaconId);
       }

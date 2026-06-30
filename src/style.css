@@ -17,11 +17,15 @@
 
 :root {
     --noesis-void: #070B1D;
-    --noesis-witness: #2D0050;
-    --noesis-flow: #0B50FB;
+    --noesis-violet: #2D0050;
+    --noesis-indigo: #0B50FB;
     --noesis-gold: #C5A017;
     --noesis-emerald: #10B5A7;
     --noesis-parchment: #F0EDE3;
+    --noesis-surface: #0E1428;
+    /* legacy aliases preserved for existing styles */
+    --noesis-witness: #2D0050;
+    --noesis-flow: #0B50FB;
     --noesis-silver: #8A9BA8;
     --noesis-deep: #0E1428;
     --noesis-terracotta: #C65D3B;

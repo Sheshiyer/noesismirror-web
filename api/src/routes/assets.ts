@@ -92,8 +92,43 @@ assetsRoutes.get('/assets/:personId/*', async (c) => {
   // Fetch asset from R2
   const objectKey = `${personId}/${assetPath}`;
   try {
-    const object = await c.env.PACKS.get(objectKey);
-    
+    // Parse Range header (e.g. "bytes=0-1023" or "bytes=1024-").
+    // <video>/<audio> elements need 206 partial responses to seek without
+    // downloading the full file. Malformed Range is treated as "no range"
+    // (lenient — we don't return 416).
+    const rangeHeader = c.req.header('Range');
+    let rangeOpt: { offset: number; length?: number } | undefined;
+    let parsedRange: { start: number; end?: number } | undefined;
+    if (rangeHeader) {
+      const match = /^bytes=(\d+)-(\d*)$/.exec(rangeHeader.trim());
+      if (match) {
+        const start = parseInt(match[1], 10);
+        const end = match[2] === '' ? undefined : parseInt(match[2], 10);
+        if (!Number.isNaN(start) && (end === undefined || (!Number.isNaN(end) && end >= start))) {
+          parsedRange = { start, end };
+          rangeOpt = end === undefined
+            ? { offset: start }
+            : { offset: start, length: end - start + 1 };
+        }
+      }
+    }
+
+    // For range requests we need the total object size for Content-Range;
+    // do a cheap head() first since R2ObjectBody.size reports the slice length,
+    // not the full object length, when a range was supplied.
+    let totalSize: number | undefined;
+    if (rangeOpt) {
+      const head = await c.env.PACKS.head(objectKey);
+      if (!head) {
+        return c.json({ error: 'Asset not found' }, 404);
+      }
+      totalSize = head.size;
+    }
+
+    const object = rangeOpt
+      ? await c.env.PACKS.get(objectKey, { range: rangeOpt })
+      : await c.env.PACKS.get(objectKey);
+
     if (!object) {
       return c.json({ error: 'Asset not found' }, 404);
     }
@@ -102,18 +137,24 @@ assetsRoutes.get('/assets/:personId/*', async (c) => {
     const headers = new Headers({
       'Content-Type': contentType,
       'Cache-Control': 'public, max-age=3600',
+      'Accept-Ranges': 'bytes',
     });
 
-    // Add content length if available
+    if (parsedRange && totalSize !== undefined) {
+      const sliceSize = object.size;
+      const endByte = parsedRange.end !== undefined
+        ? parsedRange.end
+        : parsedRange.start + sliceSize - 1;
+      headers.set('Content-Range', `bytes ${parsedRange.start}-${endByte}/${totalSize}`);
+      headers.set('Content-Length', sliceSize.toString());
+      return new Response(object.body, { status: 206, headers });
+    }
+
+    // Full response.
     if (object.size) {
       headers.set('Content-Length', object.size.toString());
     }
-
-    // Stream the response
-    return new Response(object.body, {
-      status: 200,
-      headers,
-    });
+    return new Response(object.body, { status: 200, headers });
   } catch (err) {
     console.error('R2 fetch error:', err);
     return c.json({ error: 'Failed to load asset' }, 500);

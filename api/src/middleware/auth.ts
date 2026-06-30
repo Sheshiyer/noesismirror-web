@@ -191,7 +191,14 @@ export const authMiddleware = createMiddleware<{
       token = authHeader.substring(7); // Remove 'Bearer ' prefix
     }
   }
-  
+
+  // Fallback for media elements (<video>/<audio>) which cannot set custom
+  // headers — they pass the token as ?token=... in the URL.
+  if (!token) {
+    const queryToken = c.req.query('token');
+    if (queryToken) token = queryToken;
+  }
+
   if (!token) {
     return c.json({ error: 'Missing authentication token' }, 401);
   }

@@ -11,9 +11,11 @@ export function BeamAudio() {
 
   useEffect(() => {
     const onHit = (payload: { position: THREE.Vector3; radius: number }) => {
+      // Read duckAudio fresh each fire so we don't re-subscribe per tick.
+      const duck = useGameStore.getState().duckAudio;
       play({
         position: payload.position,
-        volume: 0.5,
+        volume: 0.5 * duck,
         detuneRange: 300,
         refDistance: 5,
         maxDistance: 60

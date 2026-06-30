@@ -65,11 +65,13 @@ export const KNOWN_ASSETS: BeaconAsset[] = [
 
 /**
  * Generates beacon positions on a golden-angle spiral in the XZ plane.
+ * Beacons spread 25–80 units from origin; the central garden radius 0–25
+ * is reserved for spawn arrival so the player walks to discover them.
  * Y is intentionally omitted — the frontend renders on a 2D ground plane.
  */
 export function generateSpiralPosition(index: number, total: number): { x: number; z: number } {
   const goldenAngle = Math.PI * (3 - Math.sqrt(5));
-  const radius = 5 + (index / total) * 15;
+  const radius = 25 + (index / total) * 55;
   const angle = index * goldenAngle;
   return {
     x: Math.round(radius * Math.cos(angle) * 100) / 100,

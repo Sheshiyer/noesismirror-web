@@ -48,6 +48,11 @@ interface GameState {
   // ===== WebGPU State =====
   gpuError: string | null;
   setGpuError: (error: string | null) => void;
+
+  // ===== Modal / Audio Ducking State =====
+  modalOpen: boolean;
+  duckAudio: number;
+  setModalOpen: (open: boolean) => void;
 }
 
 export const useGameStore = create<GameState>((set, get) => ({
@@ -97,4 +102,9 @@ export const useGameStore = create<GameState>((set, get) => ({
   // ===== WebGPU State =====
   gpuError: null,
   setGpuError: (error) => set({ gpuError: error }),
+
+  // ===== Modal / Audio Ducking State =====
+  modalOpen: false,
+  duckAudio: 1,
+  setModalOpen: (open) => set({ modalOpen: open, duckAudio: open ? 0.15 : 1 }),
 }));
