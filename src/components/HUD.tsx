@@ -1,13 +1,28 @@
 import type { ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import CloseIcon from '@mui/icons-material/Close';
+import PersonIcon from '@mui/icons-material/Person';
+import SettingsIcon from '@mui/icons-material/SettingsOutlined';
+import ThreeSixtyIcon from '@mui/icons-material/ThreeSixty';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import VolumeOffIcon from '@mui/icons-material/VolumeOff';
+import VolumeUpIcon from '@mui/icons-material/VolumeUp';
 import { Link, useNavigate } from 'react-router-dom';
 import type { Beacon } from '../types/world';
-import { useGameStore, type Quality } from '../core/store/gameStore';
+import { CameraMode, useGameStore, type Quality } from '../core/store/gameStore';
 import { useAudioStore } from '../core/store/audioStore';
 import { useVisitedStore } from '../core/store/visitedStore';
 import { API_URL } from '../config';
 import { signOut } from '../auth/signOut';
 import Settings from './Settings';
+import {
+  FieldSurface,
+  HudIconButton,
+  HudKeyChip,
+  HudStatusDot,
+  ObservedProgress,
+} from './hud/FieldHudChrome';
 
 export interface HUDProps {
   personId: string;
@@ -36,11 +51,6 @@ function decodeEmailFromToken(token: string | null): string | null {
     return null;
   }
 }
-
-// Navigation UI per brand: Satoshi (font-sans), not mono. Mono is reserved
-// for biometric data, timestamps, engine output. Keys are UI affordances.
-const CHIP_CLASSES =
-  'border border-noesis-gold/40 bg-noesis-void/60 px-2.5 py-1 font-sans uppercase tracking-[0.3em] text-[11px] font-medium text-noesis-parchment/80';
 
 /**
  * Fix F — Brand-aligned modal frame per bento module 6.
@@ -152,6 +162,8 @@ export default function HUD({ personId, personName, beacons }: HUDProps) {
 
   const quality = useGameStore((s) => s.quality);
   const setQuality = useGameStore((s) => s.setQuality);
+  const cameraMode = useGameStore((s) => s.cameraMode);
+  const setCameraMode = useGameStore((s) => s.setCameraMode);
 
   const reducedMotionPref = useGameStore((s) => s.reducedMotionPref);
   const setReducedMotionPref = useGameStore((s) => s.setReducedMotionPref);
@@ -420,6 +432,27 @@ export default function HUD({ personId, personName, beacons }: HUDProps) {
   const visitedCount = visitedSet.size;
   const beaconTotal = beacons.length;
   const fieldLabel = (personName ?? personId).toUpperCase();
+  const cameraConfig: Record<CameraMode, { label: string; icon: ReactNode }> = {
+    [CameraMode.Follow]: {
+      label: 'Third person camera',
+      icon: <PersonIcon fontSize="small" />,
+    },
+    [CameraMode.FPV]: {
+      label: 'First person camera',
+      icon: <VisibilityIcon fontSize="small" />,
+    },
+    [CameraMode.Detached]: {
+      label: 'Detached camera',
+      icon: <ThreeSixtyIcon fontSize="small" />,
+    },
+  };
+  const nextCameraMode = () => setCameraMode((cameraMode + 1) % 3);
+  const qualityLabel =
+    quality === 'high'
+      ? 'High quality'
+      : quality === 'medium'
+        ? 'Medium quality'
+        : 'Low quality';
 
   // ===== Mini-map dots =====
   const mapDots = useMemo(() => {
@@ -437,13 +470,6 @@ export default function HUD({ personId, personName, beacons }: HUDProps) {
   }, [beacons, visitedSet]);
 
   const audioActive = audioContextStarted && !muted;
-
-  const healthColor: Record<HealthStatus, string> = {
-    ok: 'bg-noesis-emerald',
-    slow: 'bg-noesis-gold',
-    fail: 'bg-red-500',
-    unknown: 'bg-noesis-parchment/30',
-  };
   const healthLabel: Record<HealthStatus, string> = {
     ok: 'Connection healthy',
     slow: 'Connection slow',
@@ -481,36 +507,73 @@ export default function HUD({ personId, personName, beacons }: HUDProps) {
         </Link>
       </div>
 
-      {/* TP8-002 — Session chip top-right + audio dot + connection dot */}
-      <header className="pointer-events-auto absolute top-4 right-6 flex items-center gap-4 font-mono text-xs text-noesis-parchment/60">
-        {userEmail && <span>{userEmail}</span>}
+      <FieldSurface
+        ariaLabel="Session controls"
+        className="pointer-events-auto absolute top-4 right-20 flex max-w-[min(34rem,calc(100vw-7rem))] items-center gap-3 px-4 py-2"
+      >
+        {userEmail && (
+          <span className="truncate font-mono text-[11px] text-noesis-parchment/70">
+            {userEmail}
+          </span>
+        )}
         <button
           type="button"
           onClick={handleSignOut}
-          className="transition-colors duration-200 hover:text-noesis-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-noesis-gold/60 focus-visible:ring-offset-2 focus-visible:ring-offset-noesis-void"
+          className="shrink-0 font-mono text-[10px] uppercase tracking-[0.22em] text-noesis-gold transition-colors hover:text-noesis-emerald focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-noesis-gold/60"
         >
-          [ sign out ]
+          Sign out
         </button>
         {muted && (
-          <span
-            aria-label="Audio muted"
-            title="Audio muted (press M to unmute)"
-            className="font-mono text-noesis-gold/80 line-through"
-          >
-            ♪
+          <span className="font-mono text-[10px] text-noesis-gold line-through">
+            audio
           </span>
         )}
-        {/* TP8-007 — Audio indicator dot */}
-        <span
-          aria-label={audioActive ? 'Audio active' : 'Audio inactive'}
-          title={audioActive ? 'Audio active' : 'Audio inactive'}
-          className={`inline-block h-2 w-2 rounded-full ${
-            audioActive
-              ? 'bg-noesis-emerald motion-safe:animate-pulse'
-              : 'bg-noesis-parchment/20'
-          }`}
+        <HudStatusDot
+          label={audioActive ? 'Scene audio active' : 'Scene audio inactive'}
+          tone={audioActive ? 'emerald' : 'silver'}
+          pulse={audioActive}
         />
-      </header>
+      </FieldSurface>
+
+      <nav
+        aria-label="Field actions"
+        className="pointer-events-auto absolute top-4 right-4 flex flex-col gap-2"
+      >
+        <HudIconButton
+          label={`Cycle quality: ${qualityLabel}`}
+          title="Cycle quality (Q)"
+          onClick={() => {
+            const next = nextQuality(quality);
+            setQuality(next);
+            showToast(`QUALITY: ${next.toUpperCase()}`);
+          }}
+        >
+          <AutoAwesomeIcon fontSize="small" />
+        </HudIconButton>
+        <HudIconButton
+          label={cameraConfig[cameraMode].label}
+          title="Cycle camera (C)"
+          onClick={nextCameraMode}
+        >
+          {cameraConfig[cameraMode].icon}
+        </HudIconButton>
+        <HudIconButton
+          label={muted ? 'Unmute scene audio' : 'Mute scene audio'}
+          title="Toggle scene audio (M)"
+          pressed={!muted}
+          onClick={toggleMute}
+        >
+          {muted ? <VolumeOffIcon fontSize="small" /> : <VolumeUpIcon fontSize="small" />}
+        </HudIconButton>
+        <HudIconButton
+          label="Open settings"
+          title="Settings (S)"
+          pressed={settingsOpen}
+          onClick={() => setSettingsOpen(!settingsOpen)}
+        >
+          <SettingsIcon fontSize="small" />
+        </HudIconButton>
+      </nav>
 
       {/* TP8-006 — Compass top-center (small N/E/S/W rose) */}
       <div className="pointer-events-none absolute top-16 left-1/2 -translate-x-1/2">
@@ -643,11 +706,9 @@ export default function HUD({ personId, personName, beacons }: HUDProps) {
       {/* Fix A — Keyboard chip strip gated on isGameStarted so it doesn't leak
           through the LoadingScreen overlay. Strip lives bottom-center as before. */}
       {isGameStarted && (
-        <div className="pointer-events-none absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2">
-          {KEYBOARD_KEYS.map((k) => (
-            <span key={k} className={CHIP_CLASSES}>
-              {k}
-            </span>
+        <div className="pointer-events-none absolute bottom-6 left-1/2 flex -translate-x-1/2 gap-2">
+          {KEYBOARD_KEYS.map((key) => (
+            <HudKeyChip key={key}>{key}</HudKeyChip>
           ))}
         </div>
       )}
@@ -661,15 +722,20 @@ export default function HUD({ personId, personName, beacons }: HUDProps) {
       )}
 
       {/* TP8-004 — Progress chip bottom-right + connection status dot */}
-      <div className="pointer-events-none absolute bottom-6 right-6 flex items-center gap-3 font-mono uppercase tracking-[0.25em] text-[10px] text-noesis-parchment/70">
-        <span>
-          {visitedCount} of {beaconTotal} mirrors observed
-        </span>
-        {/* TP8-025 — Connection status */}
-        <span
-          aria-label={healthLabel[health]}
-          title={healthLabel[health]}
-          className={`inline-block h-2 w-2 rounded-full ${healthColor[health]}`}
+      <div className="pointer-events-none absolute right-6 bottom-6">
+        <ObservedProgress
+          observed={visitedCount}
+          total={beaconTotal}
+          healthLabel={healthLabel[health]}
+          healthTone={
+            health === 'ok'
+              ? 'emerald'
+              : health === 'slow'
+                ? 'gold'
+                : health === 'fail'
+                  ? 'red'
+                  : 'silver'
+          }
         />
       </div>
 
@@ -743,9 +809,9 @@ export default function HUD({ personId, personName, beacons }: HUDProps) {
               type="button"
               onClick={() => setVisitedListOpen(false)}
               aria-label="Close visited list"
-              className="font-mono text-xl leading-none text-noesis-gold hover:text-noesis-parchment focus-visible:outline-none"
+              className="grid h-8 w-8 place-items-center text-noesis-gold transition-colors hover:text-noesis-parchment focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-noesis-gold/60"
             >
-              ×
+              <CloseIcon fontSize="small" />
             </button>
           </div>
           {visitedRows.length === 0 ? (
