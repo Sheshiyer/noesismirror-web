@@ -1,7 +1,5 @@
 import type { ReactNode } from 'react';
-
-const surface =
-  'relative border border-noesis-gold/35 bg-noesis-void/75 text-noesis-parchment shadow-[0_0_30px_rgba(7,11,29,0.55)] backdrop-blur-md';
+import { noesisSurfaceClass } from './fieldHudChromeStyles';
 
 const focus =
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-noesis-gold/60 focus-visible:ring-offset-2 focus-visible:ring-offset-noesis-void';
@@ -36,9 +34,8 @@ export interface ObservedProgressProps {
   healthTone: HudStatusDotProps['tone'];
 }
 
-export function noesisSurfaceClass(extra = '') {
-  return `${surface} ${extra}`.trim();
-}
+// eslint-disable-next-line react-refresh/only-export-components -- stable public API for shared HUD styling helper
+export { noesisSurfaceClass } from './fieldHudChromeStyles';
 
 export function CornerBrackets() {
   return (

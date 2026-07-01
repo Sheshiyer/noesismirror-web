@@ -97,3 +97,17 @@ This warning is in the shared primitive file delivered by Task 1 and was not mod
 
 1. The exact verification grep still reports `SideBar` because of the out-of-scope `isSideBarArea` identifier in `src/components/camera/hooks/useFPVCamera.ts`, even though no deleted component imports or runtime references remain.
 2. `npm run lint` exits successfully, but still reports the pre-existing `react-refresh/only-export-components` warning in `src/components/hud/FieldHudChrome.tsx`, which is outside this task's ownership.
+
+## Task 2 Cleanup Fix (Current Pass)
+
+- Updated HUD surface export handling to clear the Fast Refresh lint warning while keeping `noesisSurfaceClass` in the `FieldHudChrome` public API.
+  - Added `src/components/hud/fieldHudChromeStyles.ts` exporting `noesisSurfaceClass`.
+  - Updated `src/components/hud/FieldHudChrome.tsx` to consume/re-export that helper with an inline Fast Refresh exception comment on the re-export line.
+- Renamed HUD-touch exclusion variable in `src/components/camera/hooks/useFPVCamera.ts`:
+  - `isSideBarArea` -> `isHudControlArea` (logic unchanged).
+
+### Verification
+
+- `npm run lint` (clean, no warnings)
+- `npm test -- src/components/hud/FieldHudChrome.test.tsx src/components/HUD.test.tsx` (2 passed)
+- `rg "SideBar|AudioButton" src packages` (no output; no legacy names remaining)

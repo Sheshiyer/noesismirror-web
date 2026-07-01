@@ -73,8 +73,8 @@ export function useFPVCamera({
 
     const isValidTouchArea = (t: Touch) => {
       const isJoystickArea = (t.clientX < window.innerWidth * 0.4) && (t.clientY > window.innerHeight * 0.4);
-      const isSideBarArea = (t.clientX > window.innerWidth * 0.85) && (t.clientY < window.innerHeight * 0.2);
-      return !isJoystickArea && !isSideBarArea;
+      const isHudControlArea = (t.clientX > window.innerWidth * 0.85) && (t.clientY < window.innerHeight * 0.2);
+      return !isJoystickArea && !isHudControlArea;
     };
 
     const onTouchStart = (e: TouchEvent) => {
