@@ -720,12 +720,17 @@ export default function HUD({ personId, personName, beacons }: HUDProps) {
         </div>
       )}
 
-      {/* Fix B — FPS counter moved to top-right to free up bottom-left for
-          the field-name banner. Mirrors the bottom-right progress chip. */}
+      {/* Fix B — FPS counter now rides shared HUD chrome away from the right rail. */}
       {showFps && (
-        <div className="pointer-events-none absolute top-6 right-6 font-mono text-xs text-noesis-parchment/40">
-          {fps} FPS
-        </div>
+        <FieldSurface
+          ariaLabel="Performance metrics"
+          className="pointer-events-none absolute top-16 left-6 flex items-center gap-2 px-3 py-2"
+        >
+          <span className="font-mono text-[10px] uppercase tracking-[0.24em] text-noesis-parchment/65">
+            FPS
+          </span>
+          <span className="font-mono text-sm text-noesis-gold">{fps}</span>
+        </FieldSurface>
       )}
 
       {/* TP8-004 — Progress chip bottom-right + connection status dot */}

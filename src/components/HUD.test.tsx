@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import HUD from './HUD';
 import type { Beacon } from '../types/world';
@@ -152,5 +152,16 @@ describe('HUD', () => {
     fireEvent.keyDown(window, { key: 'c' });
 
     expect(screen.getByLabelText('First person camera')).toBeInTheDocument();
+  });
+
+  it('renders fps inside shared hud chrome when enabled', () => {
+    useGameStore.setState({ showFps: true });
+
+    renderHud();
+
+    const performance = screen.getByLabelText('Performance metrics');
+    expect(performance).toBeInTheDocument();
+    expect(within(performance).getByText('FPS')).toBeInTheDocument();
+    expect(within(performance).getByText('0')).toBeInTheDocument();
   });
 });
