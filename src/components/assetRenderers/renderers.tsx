@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { marked } from 'marked';
 import type { BeaconRendererProps } from './types';
 import { buildAssetUrl } from '../../config';
+import { FieldSurface } from '../hud/FieldHudChrome';
 
 const isMarkdownUrl = (url: string): boolean => /\.md(\?|$)/i.test(url);
 const isJsonUrl = (url: string): boolean => /\.json(\?|$)/i.test(url);
@@ -88,29 +89,29 @@ interface ErrorBlockProps {
   onRetry: () => void;
 }
 const ErrorBlock: FC<ErrorBlockProps> = ({ url, onRetry }) => (
-  <div className="border border-noesis-emerald/40 bg-noesis-void/60 p-6 max-w-[60ch] mx-auto">
-    <p className="font-mono text-noesis-emerald uppercase text-sm tracking-widest">
+  <FieldSurface className="mx-auto max-w-[60ch] p-6">
+    <p className="font-mono text-sm uppercase tracking-[0.24em] text-noesis-emerald">
       Failed to load asset
     </p>
-    <div className="flex items-center gap-4 mt-4">
+    <div className="mt-4 flex flex-wrap items-center gap-3">
       <button
         type="button"
         onClick={onRetry}
-        className="font-mono text-xs text-noesis-gold uppercase tracking-widest border border-noesis-gold/40 px-3 py-1 hover:text-noesis-emerald hover:border-noesis-emerald/60 focus:outline-none focus:ring-1 focus:ring-noesis-gold/60"
+        className="border border-noesis-gold/40 px-3 py-1 font-mono text-xs uppercase tracking-[0.18em] text-noesis-gold transition-colors hover:border-noesis-emerald hover:text-noesis-emerald focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-noesis-gold/60"
       >
-        [ RETRY ]
+        Retry
       </button>
       <a
         href={url}
         target="_blank"
         rel="noopener noreferrer"
         download
-        className="font-mono text-xs text-noesis-gold uppercase tracking-widest border border-noesis-gold/40 px-3 py-1 hover:text-noesis-emerald hover:border-noesis-emerald/60 focus:outline-none focus:ring-1 focus:ring-noesis-gold/60"
+        className="border border-noesis-gold/40 px-3 py-1 font-mono text-xs uppercase tracking-[0.18em] text-noesis-gold transition-colors hover:border-noesis-emerald hover:text-noesis-emerald focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-noesis-gold/60"
       >
-        [ DOWNLOAD ]
+        Download
       </a>
     </div>
-  </div>
+  </FieldSurface>
 );
 
 type FetchStatus = 'loading' | 'ready' | 'error';
@@ -250,17 +251,19 @@ export const ReadingViewer: FC<BeaconRendererProps> = ({ beacon }) => {
       data-noesis-words={words}
       className="h-full overflow-auto"
     >
-      <div className="max-w-[60ch] mx-auto mb-4 flex flex-wrap items-baseline gap-x-4 gap-y-1">
-        <span className="font-mono text-xs text-noesis-parchment/50 uppercase tracking-widest">
-          {readMin} min read
-        </span>
-        <span className="font-mono text-xs text-noesis-parchment/40 uppercase tracking-widest">
-          {Math.round(scrollPct * 100)}% read
-        </span>
-        <span className="font-mono text-xs text-noesis-parchment/40 uppercase tracking-widest">
-          size {size} · [ + / - ]
-        </span>
-      </div>
+      <FieldSurface className="mx-auto mb-4 max-w-[60ch] px-4 py-3">
+        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+          <span className="font-mono text-xs uppercase tracking-[0.24em] text-noesis-parchment/50">
+            {readMin} min read
+          </span>
+          <span className="font-mono text-xs uppercase tracking-[0.24em] text-noesis-parchment/40">
+            {Math.round(scrollPct * 100)}% read
+          </span>
+          <span className="font-mono text-xs uppercase tracking-[0.24em] text-noesis-parchment/40">
+            size {size} · [ + / - ]
+          </span>
+        </div>
+      </FieldSurface>
       <article
         className={`${PROSE_CLASS} ${TEXT_SIZE_CLASS[size]}`}
         dangerouslySetInnerHTML={{ __html: html }}
@@ -284,8 +287,10 @@ export const AudioViewer: FC<BeaconRendererProps> = ({ beacon }) => {
   }, []);
 
   return (
-    <div className="bg-noesis-void p-6 [&_audio]:accent-noesis-emerald">
-      <h3 className="font-display text-noesis-gold text-xl mb-4">{heading}</h3>
+    <FieldSurface className="p-6 [&_audio]:accent-noesis-emerald">
+      <h3 className="mb-4 font-display text-xl tracking-[0.08em] text-noesis-gold">
+        {heading}
+      </h3>
       {errored ? (
         <ErrorBlock url={url} onRetry={retry} />
       ) : (
@@ -299,7 +304,7 @@ export const AudioViewer: FC<BeaconRendererProps> = ({ beacon }) => {
           aria-label={`Audio: ${beacon.label}`}
         />
       )}
-    </div>
+    </FieldSurface>
   );
 };
 
@@ -451,11 +456,11 @@ export const VideoViewer: FC<BeaconRendererProps> = ({ beacon }) => {
   }, []);
 
   return (
-    <div>
+    <FieldSurface className="p-6">
       {errored ? (
         <ErrorBlock url={url} onRetry={retry} />
       ) : (
-        <div className="bg-black">
+        <div className="overflow-hidden border border-noesis-gold/20 bg-black">
           <video
             key={reloadKey}
             ref={videoRef}
@@ -479,7 +484,7 @@ export const VideoViewer: FC<BeaconRendererProps> = ({ beacon }) => {
           {beacon.summary}
         </p>
       )}
-    </div>
+    </FieldSurface>
   );
 };
 
@@ -543,39 +548,41 @@ export const SlidesViewer: FC<BeaconRendererProps> = ({ beacon }) => {
   if (status === 'error') return <ErrorBlock url={url} onRetry={retry} />;
 
   return (
-    <div>
-      <h3 className="font-display text-noesis-gold text-xl mb-3">{beacon.label}</h3>
+    <FieldSurface className="p-6">
+      <h3 className="mb-3 font-display text-xl tracking-[0.08em] text-noesis-gold">
+        {beacon.label}
+      </h3>
       <object
         ref={objRef}
         data={url}
         type="application/pdf"
-        className="w-full h-[75vh] bg-black"
+        className="h-[75vh] w-full bg-black"
         tabIndex={0}
       >
-        <div className="p-6 bg-noesis-void">
-          <p className="font-mono text-sm text-noesis-parchment/70 mb-3">
+        <FieldSurface className="p-6">
+          <p className="mb-3 font-mono text-sm text-noesis-parchment/80">
             Your browser cannot display this PDF inline.
           </p>
           <a
             href={url}
             target="_blank"
             rel="noopener noreferrer"
-            className="font-mono text-sm text-noesis-gold underline hover:text-noesis-emerald"
+            className="font-mono text-sm text-noesis-gold underline transition-colors hover:text-noesis-emerald"
           >
             Open slides in new tab
           </a>
-        </div>
+        </FieldSurface>
       </object>
       {/* TP4-015 — page-count chip + nav hints */}
-      <div className="flex items-center justify-between mt-3">
-        <span className="font-mono text-xs text-noesis-parchment/50 uppercase tracking-widest">
+      <div className="mt-3 flex items-center justify-between">
+        <span className="font-mono text-xs uppercase tracking-[0.24em] text-noesis-parchment/50">
           PDF Viewer
         </span>
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => objRef.current?.focus()}
-            className="font-mono text-xs text-noesis-gold uppercase tracking-widest border border-noesis-gold/40 px-3 py-1 hover:text-noesis-emerald hover:border-noesis-emerald/60 focus:outline-none focus:ring-1 focus:ring-noesis-gold/60"
+            className="border border-noesis-gold/40 px-3 py-1 font-mono text-xs uppercase tracking-[0.18em] text-noesis-gold transition-colors hover:border-noesis-emerald hover:text-noesis-emerald focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-noesis-gold/60"
             aria-label="Previous page"
             title="PageUp"
           >
@@ -584,7 +591,7 @@ export const SlidesViewer: FC<BeaconRendererProps> = ({ beacon }) => {
           <button
             type="button"
             onClick={() => objRef.current?.focus()}
-            className="font-mono text-xs text-noesis-gold uppercase tracking-widest border border-noesis-gold/40 px-3 py-1 hover:text-noesis-emerald hover:border-noesis-emerald/60 focus:outline-none focus:ring-1 focus:ring-noesis-gold/60"
+            className="border border-noesis-gold/40 px-3 py-1 font-mono text-xs uppercase tracking-[0.18em] text-noesis-gold transition-colors hover:border-noesis-emerald hover:text-noesis-emerald focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-noesis-gold/60"
             aria-label="Next page"
             title="PageDown"
           >
@@ -592,10 +599,10 @@ export const SlidesViewer: FC<BeaconRendererProps> = ({ beacon }) => {
           </button>
         </div>
       </div>
-      <p className="font-mono text-[10px] text-noesis-parchment/30 uppercase tracking-widest mt-2 text-right">
+      <p className="mt-2 text-right font-mono text-[10px] uppercase tracking-[0.24em] text-noesis-parchment/30">
         [ PageUp / PageDown ]
       </p>
-    </div>
+    </FieldSurface>
   );
 };
 
@@ -678,22 +685,24 @@ export const StudyViewer: FC<BeaconRendererProps> = ({ beacon }) => {
 
   if (json) {
     return (
-      <div>
-        <p className="font-mono text-xs text-noesis-parchment/60 uppercase tracking-widest mb-3">
+      <FieldSurface className="p-6">
+        <p className="mb-3 font-mono text-xs uppercase tracking-[0.24em] text-noesis-parchment/60">
           Interactive view coming soon &mdash; raw data shown below
         </p>
-        <pre className="font-mono text-xs text-noesis-parchment/80 overflow-auto bg-noesis-void p-4 border border-noesis-gold/20">
+        <pre className="overflow-auto border border-noesis-gold/20 bg-noesis-void p-4 font-mono text-xs text-noesis-parchment/80">
           {JSON.stringify(data, null, 2)}
         </pre>
-      </div>
+      </FieldSurface>
     );
   }
 
   if (!markdown) {
     return (
-      <p className="font-mono text-sm text-noesis-parchment/70">
-        Study content will load from: {beacon.assetUrl}
-      </p>
+      <FieldSurface className="p-6">
+        <p className="font-mono text-sm text-noesis-parchment/80">
+          Study content will load from: {beacon.assetUrl}
+        </p>
+      </FieldSurface>
     );
   }
 
@@ -703,17 +712,19 @@ export const StudyViewer: FC<BeaconRendererProps> = ({ beacon }) => {
       data-noesis-words={words}
       className="h-full overflow-auto"
     >
-      <div className="max-w-[60ch] mx-auto mb-4 flex flex-wrap items-baseline gap-x-4 gap-y-1">
-        <span className="font-mono text-xs text-noesis-parchment/50 uppercase tracking-widest">
-          {readMin} min read
-        </span>
-        <span className="font-mono text-xs text-noesis-parchment/40 uppercase tracking-widest">
-          {Math.round(scrollPct * 100)}% read
-        </span>
-        <span className="font-mono text-xs text-noesis-parchment/40 uppercase tracking-widest">
-          size {size} · [ + / - ]
-        </span>
-      </div>
+      <FieldSurface className="mx-auto mb-4 max-w-[60ch] px-4 py-3">
+        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+          <span className="font-mono text-xs uppercase tracking-[0.24em] text-noesis-parchment/50">
+            {readMin} min read
+          </span>
+          <span className="font-mono text-xs uppercase tracking-[0.24em] text-noesis-parchment/40">
+            {Math.round(scrollPct * 100)}% read
+          </span>
+          <span className="font-mono text-xs uppercase tracking-[0.24em] text-noesis-parchment/40">
+            size {size} · [ + / - ]
+          </span>
+        </div>
+      </FieldSurface>
       <article
         className={`${PROSE_CLASS} ${TEXT_SIZE_CLASS[size]}`}
         dangerouslySetInnerHTML={{ __html: html }}
