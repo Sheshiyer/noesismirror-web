@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo } from 'react';
 import { useGameStore, type Quality } from '../core/store/gameStore';
 import { useAudioStore } from '../core/store/audioStore';
+import CloseIcon from '@mui/icons-material/Close';
+import { CornerBrackets, noesisSurfaceClass } from './hud/FieldHudChrome';
 
 const APP_VERSION = '0.1.1 · Calliope';
 
@@ -19,6 +21,14 @@ const KEY_BINDINGS: ReadonlyArray<{ key: string; label: string }> = [
   { key: 'S', label: 'Open settings' },
   { key: 'SHIFT + R', label: 'Cycle reduced-motion preference' },
 ];
+
+const labelClass =
+  'flex items-center justify-between gap-4 font-sans text-xs uppercase tracking-[0.18em]';
+const selectClass =
+  'border border-noesis-gold/40 bg-noesis-void px-2 py-1 font-sans text-xs uppercase tracking-[0.16em] text-noesis-parchment focus:border-noesis-gold focus:outline-none';
+const rangeClass = 'w-full accent-noesis-gold';
+const muteButtonClass =
+  'w-full border px-3 py-2 font-sans text-xs uppercase tracking-[0.25em] transition-colors';
 
 /**
  * Settings — right-side slide-out drawer surfaced from the HUD via the `S`
@@ -108,15 +118,11 @@ export default function Settings() {
     <aside
       role="dialog"
       aria-label="Settings"
-      className="pointer-events-auto fixed top-0 right-0 z-50 h-full w-96 max-w-[92vw] overflow-y-auto border-l border-noesis-gold/40 bg-[#0E1428] text-noesis-parchment"
+      className={noesisSurfaceClass(
+        'pointer-events-auto fixed top-0 right-0 z-50 h-full w-96 max-w-[92vw] overflow-y-auto border-l px-0 text-noesis-parchment',
+      )}
     >
-      {/* Fix B — Sacred-Gold corner brackets per bento module 6, matching the
-          Pause + Help modal frame. Anchored to the drawer's visible inner
-          rectangle (top-left, top-right, bottom-left, bottom-right). */}
-      <span aria-hidden className="pointer-events-none absolute top-0 left-0 h-3 w-3 border-t border-l border-noesis-gold" />
-      <span aria-hidden className="pointer-events-none absolute top-0 right-0 h-3 w-3 border-t border-r border-noesis-gold" />
-      <span aria-hidden className="pointer-events-none absolute bottom-0 left-0 h-3 w-3 border-b border-l border-noesis-gold" />
-      <span aria-hidden className="pointer-events-none absolute bottom-0 right-0 h-3 w-3 border-b border-r border-noesis-gold" />
+      <CornerBrackets />
 
       <div className="flex items-center justify-between border-b border-noesis-silver/30 px-8 py-4">
         <h2 className="font-display text-xl tracking-[0.4em] text-noesis-gold">
@@ -126,9 +132,9 @@ export default function Settings() {
           type="button"
           onClick={() => setOpen(false)}
           aria-label="Close settings"
-          className="font-mono text-2xl leading-none text-noesis-gold transition-colors hover:text-noesis-parchment focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-noesis-gold/60"
+          className="grid h-9 w-9 place-items-center border border-noesis-gold/35 text-noesis-gold transition-colors hover:border-noesis-emerald hover:text-noesis-emerald focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-noesis-gold/60"
         >
-          ×
+          <CloseIcon fontSize="small" />
         </button>
       </div>
 
@@ -140,12 +146,12 @@ export default function Settings() {
           <h3 className="mb-3 font-sans text-[10px] font-medium uppercase tracking-[0.3em] text-noesis-gold/80">
             Profile
           </h3>
-          <label className="flex items-center justify-between gap-4 font-sans text-xs uppercase tracking-[0.2em]">
+          <label className={labelClass}>
             <span className="text-noesis-parchment/70">Avatar</span>
             <select
               value={genderPreference}
               onChange={onGenderChange}
-              className="border border-noesis-gold/40 bg-noesis-void px-2 py-1 font-sans text-xs uppercase tracking-[0.2em] text-noesis-parchment focus:border-noesis-gold focus:outline-none"
+              className={selectClass}
             >
               <option value="auto">Auto (from report)</option>
               <option value="male">Male Plumber</option>
@@ -159,24 +165,24 @@ export default function Settings() {
           <h3 className="mb-3 font-mono text-[10px] uppercase tracking-[0.3em] text-noesis-gold/80">
             Display
           </h3>
-          <label className="mb-4 flex items-center justify-between gap-4 font-mono text-xs uppercase tracking-[0.2em]">
+          <label className={`mb-4 ${labelClass}`}>
             <span className="text-noesis-parchment/70">Quality</span>
             <select
               value={quality}
               onChange={onQualityChange}
-              className="border border-noesis-gold/40 bg-noesis-void px-2 py-1 font-mono text-xs uppercase tracking-[0.2em] text-noesis-parchment focus:border-noesis-gold focus:outline-none"
+              className={selectClass}
             >
               <option value="low">Low</option>
               <option value="medium">Medium</option>
               <option value="high">High</option>
             </select>
           </label>
-          <label className="flex items-center justify-between gap-4 font-mono text-xs uppercase tracking-[0.2em]">
+          <label className={labelClass}>
             <span className="text-noesis-parchment/70">Reduced motion</span>
             <select
               value={reducedMotionValue}
               onChange={onReducedMotionChange}
-              className="border border-noesis-gold/40 bg-noesis-void px-2 py-1 font-mono text-xs uppercase tracking-[0.2em] text-noesis-parchment focus:border-noesis-gold focus:outline-none"
+              className={selectClass}
             >
               <option value="auto">Auto</option>
               <option value="off">Off</option>
@@ -203,13 +209,13 @@ export default function Settings() {
               value={masterVolume}
               onChange={onVolume}
               aria-label="Master volume"
-              className="w-full accent-noesis-gold"
+              className={rangeClass}
             />
           </label>
           <button
             type="button"
             onClick={toggleMute}
-            className={`w-full border px-3 py-2 font-mono text-xs uppercase tracking-[0.25em] transition-colors ${
+            className={`${muteButtonClass} ${
               muted
                 ? 'border-noesis-gold bg-noesis-gold/10 text-noesis-gold'
                 : 'border-noesis-gold/40 text-noesis-parchment/70 hover:border-noesis-gold/60'
