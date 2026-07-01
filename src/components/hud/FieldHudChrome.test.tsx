@@ -1,11 +1,23 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { FieldSurface, HudIconButton, HudKeyChip, ObservedProgress } from './FieldHudChrome';
+import {
+  FieldSurface,
+  HudIconButton,
+  HudKeyChip,
+  ObservedProgress,
+  noesisSurfaceClass,
+} from './FieldHudChrome';
 
 describe('FieldHudChrome', () => {
   it('renders framed HUD surfaces with accessible labels', () => {
     render(<FieldSurface ariaLabel="Session controls">content</FieldSurface>);
     expect(screen.getByLabelText('Session controls')).toHaveClass('border-noesis-gold/35');
+  });
+
+  it('does not override caller positioning utilities', () => {
+    expect(noesisSurfaceClass('absolute top-4 right-4')).toContain('absolute');
+    expect(noesisSurfaceClass('absolute top-4 right-4')).not.toMatch(/\brelative\b/);
+    expect(noesisSurfaceClass('p-4')).toMatch(/\brelative\b/);
   });
 
   it('renders HUD icon buttons with labels and pressed state', () => {
