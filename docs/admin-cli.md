@@ -70,6 +70,22 @@ npm run admin:grant -- <email> <personId>
 npm run admin:help
 ```
 
+## Runtime Diagnostics
+
+The browser installs a small client diagnostic reporter at startup. Uncaught
+runtime errors and unhandled promise rejections are stored locally in
+`localStorage.noesis_diag_events` and posted to the Worker `/client-events`
+endpoint. The Worker writes them as `client-event` log lines.
+
+Tail those logs while reproducing a field issue:
+
+```bash
+npm run logs:client
+```
+
+This lets an operator watch field crashes from the terminal instead of relying
+on screenshots or pasted console output.
+
 ## Production Safety
 
 - Admin routes check `c.env.ADMIN_SECRET`.

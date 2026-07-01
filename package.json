@@ -17,6 +17,7 @@
     "admin:grants": "npx tsx scripts/admin.ts grants",
     "admin:grant": "npx tsx scripts/admin.ts grant",
     "admin:help": "npx tsx scripts/admin.ts --help",
+    "logs:client": "cd api && npm run logs:client --",
     "deploy": "npm run build && wrangler deploy"
   },
   "devDependencies": {
