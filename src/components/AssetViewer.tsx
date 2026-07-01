@@ -3,6 +3,8 @@ import type { Beacon } from '../types/world';
 import { renderers } from './assetRenderers/registry';
 import { useGameStore } from '../core/store/gameStore';
 import { useVisitedStore } from '../core/store/visitedStore';
+import { useAudioStore } from '../core/store/audioStore';
+import { buildAssetUrl } from '../config';
 
 export interface AssetViewerProps {
   beacon: Beacon;
@@ -50,6 +52,10 @@ export default function AssetViewer({ beacon, onClose, reducedMotion }: AssetVie
   const bodyRef = useRef<HTMLDivElement>(null);
   const Renderer = renderers[beacon.type];
   const setModalOpen = useGameStore((state) => state.setModalOpen);
+  const assetPlaybackActive = useGameStore((state) => state.assetPlaybackActive);
+  const setAssetPlaybackActive = useGameStore((state) => state.setAssetPlaybackActive);
+  const masterVolume = useAudioStore((state) => state.masterVolume);
+  const muted = useAudioStore((state) => state.muted);
   // Contract: useVisitedStore() returns the full store object.
   const { markVisited } = useVisitedStore();
 
@@ -74,13 +80,6 @@ export default function AssetViewer({ beacon, onClose, reducedMotion }: AssetVie
     closeButtonRef.current?.focus();
   }, []);
 
-  useEffect(() => {
-    setModalOpen(true);
-    return () => {
-      setModalOpen(false);
-    };
-  }, [setModalOpen]);
-
   // TP4-001 — kick the entering->entered transition on next frame.
   useEffect(() => {
     if (reducedMotion) return;
@@ -100,6 +99,94 @@ export default function AssetViewer({ beacon, onClose, reducedMotion }: AssetVie
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [Renderer, beacon.assetUrl, beacon.id]);
+
+  const pausePanelMedia = useCallback(() => {
+    panelRef.current
+      ?.querySelectorAll<HTMLMediaElement>('video, audio')
+      .forEach((media) => {
+        media.pause();
+        media.currentTime = 0;
+      });
+    setAssetPlaybackActive(false);
+  }, [setAssetPlaybackActive]);
+
+  useEffect(() => {
+    setModalOpen(true);
+    return () => {
+      pausePanelMedia();
+      setModalOpen(false);
+    };
+  }, [pausePanelMedia, setModalOpen]);
+
+  // Native <audio>/<video> elements are outside the Web Audio graph. Coordinate
+  // their playback explicitly so asset media becomes the foreground voice while
+  // the scene bed ducks underneath it.
+  useEffect(() => {
+    const panel = panelRef.current;
+    if (!panel) return;
+
+    const cleanupFns: Array<() => void> = [];
+
+    const mediaElements = () =>
+      Array.from(panel.querySelectorAll<HTMLMediaElement>('video, audio'));
+
+    const syncMediaPreferences = () => {
+      mediaElements().forEach((media) => {
+        media.muted = muted;
+        media.volume = masterVolume;
+      });
+    };
+
+    const updatePlaybackState = () => {
+      const active = mediaElements().some((media) => !media.paused && !media.ended);
+      setAssetPlaybackActive(active);
+    };
+
+    const bindMedia = () => {
+      cleanupFns.splice(0).forEach((cleanup) => cleanup());
+
+      mediaElements().forEach((media) => {
+        const onPlay = () => {
+          document.querySelectorAll<HTMLMediaElement>('video, audio').forEach((other) => {
+            if (other !== media && !other.paused) {
+              other.pause();
+            }
+          });
+          setAssetPlaybackActive(true);
+        };
+        const onInactive = () => updatePlaybackState();
+
+        media.addEventListener('play', onPlay);
+        media.addEventListener('playing', onPlay);
+        media.addEventListener('pause', onInactive);
+        media.addEventListener('ended', onInactive);
+        media.addEventListener('error', onInactive);
+        media.addEventListener('emptied', onInactive);
+
+        cleanupFns.push(() => {
+          media.removeEventListener('play', onPlay);
+          media.removeEventListener('playing', onPlay);
+          media.removeEventListener('pause', onInactive);
+          media.removeEventListener('ended', onInactive);
+          media.removeEventListener('error', onInactive);
+          media.removeEventListener('emptied', onInactive);
+        });
+      });
+
+      syncMediaPreferences();
+      updatePlaybackState();
+    };
+
+    const observer = new MutationObserver(bindMedia);
+    observer.observe(panel, { childList: true, subtree: true });
+    bindMedia();
+
+    return () => {
+      observer.disconnect();
+      cleanupFns.splice(0).forEach((cleanup) => cleanup());
+      setAssetPlaybackActive(false);
+    };
+  }, [masterVolume, muted, setAssetPlaybackActive]);
 
   // TP4-003 — drive a top progress bar from any video/audio inside the panel.
   // Re-checks on every render; uses requestAnimationFrame for smoothness.
@@ -137,6 +224,7 @@ export default function AssetViewer({ beacon, onClose, reducedMotion }: AssetVie
   const handleClose = useCallback(() => {
     if (closeRequestedRef.current) return;
     closeRequestedRef.current = true;
+    pausePanelMedia();
     if (reducedMotion) {
       onClose();
       return;
@@ -145,7 +233,7 @@ export default function AssetViewer({ beacon, onClose, reducedMotion }: AssetVie
     window.setTimeout(() => {
       onClose();
     }, 200);
-  }, [onClose, reducedMotion]);
+  }, [onClose, pausePanelMedia, reducedMotion]);
 
   const handleKeyDown = useCallback(
     (event: React.KeyboardEvent) => {
@@ -234,9 +322,8 @@ export default function AssetViewer({ beacon, onClose, reducedMotion }: AssetVie
     }
   }, [beacon.assetUrl, beacon.id]);
 
-  // TP4-026 — download URL (uses buildAssetUrl via assetRenderers in body).
-  // We just pass the raw assetUrl to <a download>; the browser will follow.
-  const downloadHref = beacon.assetUrl;
+  // TP4-026 — download URL must use the same auth-aware URL as inline media.
+  const downloadHref = buildAssetUrl(beacon.assetUrl);
 
   // TP4-024 — choose a metadata footer string. Renderer reports word count
   // by writing data-noesis-words on the body container; we read it lazily.
@@ -334,7 +421,7 @@ export default function AssetViewer({ beacon, onClose, reducedMotion }: AssetVie
               </p>
               {/* TP4-022 — scene-audio dimmed indicator (always visible while open) */}
               <span className="font-mono text-xs text-noesis-parchment/40 uppercase tracking-widest">
-                · scene audio dimmed
+                {assetPlaybackActive ? '· media playing · scene audio low' : '· scene audio dimmed'}
               </span>
             </div>
             {beacon.summary && (

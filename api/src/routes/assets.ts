@@ -45,12 +45,64 @@ const MIME_TYPES: Record<string, string> = {
   '.js': 'text/javascript',
 };
 
+const MEDIA_SNIFF_EXTENSIONS = new Set(['.mp3', '.m4a', '.aac', '.mp4', '.mov']);
+
 /**
  * Gets the MIME type for a file based on its extension.
  */
 function getMimeType(path: string): string {
   const ext = path.toLowerCase().match(/\.[^.]+$/)?.[0] ?? '';
   return MIME_TYPES[ext] ?? 'application/octet-stream';
+}
+
+export function sniffMediaMimeType(path: string, bytes: Uint8Array, fallback = getMimeType(path)): string {
+  const ext = path.toLowerCase().match(/\.[^.]+$/)?.[0] ?? '';
+  const isAudioPath = path.toLowerCase().includes('/audio/');
+  const isVideoPath = path.toLowerCase().includes('/video/');
+
+  if (bytes.length >= 3 && bytes[0] === 0x49 && bytes[1] === 0x44 && bytes[2] === 0x33) {
+    return 'audio/mpeg';
+  }
+
+  if (bytes.length >= 2 && bytes[0] === 0xff && (bytes[1] & 0xe0) === 0xe0) {
+    return 'audio/mpeg';
+  }
+
+  if (
+    bytes.length >= 12 &&
+    bytes[4] === 0x66 &&
+    bytes[5] === 0x74 &&
+    bytes[6] === 0x79 &&
+    bytes[7] === 0x70
+  ) {
+    if (isAudioPath || ext === '.m4a' || ext === '.aac' || ext === '.mp3') {
+      return 'audio/mp4';
+    }
+    if (isVideoPath || ext === '.mp4' || ext === '.mov') {
+      return 'video/mp4';
+    }
+  }
+
+  return fallback;
+}
+
+async function resolveContentType(bucket: R2Bucket, objectKey: string, assetPath: string): Promise<string> {
+  const fallback = getMimeType(assetPath);
+  const ext = assetPath.toLowerCase().match(/\.[^.]+$/)?.[0] ?? '';
+
+  if (!MEDIA_SNIFF_EXTENSIONS.has(ext)) {
+    return fallback;
+  }
+
+  try {
+    const sample = await bucket.get(objectKey, { range: { offset: 0, length: 16 } });
+    if (!sample) return fallback;
+    const bytes = new Uint8Array(await sample.arrayBuffer());
+    return sniffMediaMimeType(assetPath, bytes, fallback);
+  } catch (err) {
+    console.error('MIME sniff error:', err);
+    return fallback;
+  }
 }
 
 /**
@@ -138,7 +190,7 @@ assetsRoutes.get('/assets/:personId/*', async (c) => {
       return c.json({ error: 'Asset not found' }, 404);
     }
 
-    const contentType = getMimeType(assetPath);
+    const contentType = await resolveContentType(c.env.PACKS, objectKey, assetPath);
     const headers = new Headers({
       'Content-Type': contentType,
       'Cache-Control': 'public, max-age=3600',

@@ -71,8 +71,10 @@ interface GameState {
 
   // ===== Modal / Audio Ducking State =====
   modalOpen: boolean;
+  assetPlaybackActive: boolean;
   duckAudio: number;
   setModalOpen: (open: boolean) => void;
+  setAssetPlaybackActive: (active: boolean) => void;
 
   // ===== Onboarding State (TP7) =====
   onboardingPhase: OnboardingPhase;
@@ -140,6 +142,9 @@ const memoryStorage: Storage = {
 };
 const safeStorage = () =>
   typeof window !== 'undefined' && window.localStorage ? window.localStorage : memoryStorage;
+
+const MODAL_DUCK_AUDIO = 0.15;
+const MEDIA_DUCK_AUDIO = 0.03;
 
 export const useGameStore = create<GameState>()(
   persist(
@@ -212,8 +217,21 @@ export const useGameStore = create<GameState>()(
 
       // ===== Modal / Audio Ducking State =====
       modalOpen: false,
+      assetPlaybackActive: false,
       duckAudio: 1,
-      setModalOpen: (open) => set({ modalOpen: open, duckAudio: open ? 0.15 : 1 }),
+      setModalOpen: (open) => set((state) => ({
+        modalOpen: open,
+        assetPlaybackActive: open ? state.assetPlaybackActive : false,
+        duckAudio: open
+          ? state.assetPlaybackActive ? MEDIA_DUCK_AUDIO : MODAL_DUCK_AUDIO
+          : 1,
+      })),
+      setAssetPlaybackActive: (active) => set((state) => ({
+        assetPlaybackActive: active,
+        duckAudio: state.modalOpen
+          ? active ? MEDIA_DUCK_AUDIO : MODAL_DUCK_AUDIO
+          : 1,
+      })),
 
       // ===== Onboarding State (TP7) =====
       onboardingPhase: initialOnboardingPhase,
