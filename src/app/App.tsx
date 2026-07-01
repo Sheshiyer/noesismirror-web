@@ -91,9 +91,8 @@ export default function App({ config }: AppProps) {
     });
 
     return <>
-        {/* Leva's UI panel calls ReactDOM.render internally and crashes React 19
-            production builds. The useControls hooks can stay registered for now;
-            the panel should return only after Leva is upgraded or replaced. */}
+        {/* Keep legacy debug controls out of the production field runtime until
+            the control panel stack is replaced with a React 19-safe path. */}
         <DeviceDetector />
         <UI />
         <KeyboardMapper input={input} keyMap={keyBindings} />

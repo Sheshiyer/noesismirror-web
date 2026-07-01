@@ -1,6 +1,5 @@
 import { useRef, useMemo, useEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { useControls } from 'leva';
 import * as THREE from 'three/webgpu';
 import { WebGPURenderer } from 'three/webgpu';
 import {
@@ -21,6 +20,10 @@ import {
 import { DEFAULT_GRASS_AREA_SIZE } from '../../grass/core/config';
 
 const TRAIL_TEXTURE_SIZE = 512;
+const TRAIL_CONFIG = {
+  fadeSpeed: 0.9,
+  trailRadius: 0.01,
+};
 
 export function useCharacterTrail(
   uWorldPos: any,
@@ -29,11 +32,7 @@ export function useCharacterTrail(
   const { gl } = useThree();
   const renderer = gl as unknown as WebGPURenderer;
 
-  // Leva controls for trail parameters (real-time adjustable)
-  const controls = useControls('Character.Trail', {
-    fadeSpeed: { value: 0.9, min: 0.8, max: 1.0, step: 0.001, label: 'Fade Speed' },
-    trailRadius: { value: 0.01, min: 0.001, max: 0.05, step: 0.001, label: 'Trail Radius' },
-  }, { collapsed: true });
+  const controls = TRAIL_CONFIG;
   // Ping-pong phase state
   const phaseRef = useRef(true);
   const currentTextureRef = useRef<THREE.StorageTexture | null>(null);
@@ -109,12 +108,6 @@ export function useCharacterTrail(
       computeToPing: computeToPingFn().compute(TRAIL_TEXTURE_SIZE * TRAIL_TEXTURE_SIZE),
     };
   }, [pingTexture, pongTexture, uWorldPos, uVelocity, uFadeSpeed, uTrailRadius, TRAIL_TEXTURE_SIZE]);
-
-  // Update uniforms only when values change
-  useEffect(() => {
-    uFadeSpeed.value = controls.fadeSpeed;
-    uTrailRadius.value = controls.trailRadius;
-  }, [controls]);
 
   // Cleanup textures on unmount
   useEffect(() => {

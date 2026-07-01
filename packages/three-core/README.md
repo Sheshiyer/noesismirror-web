@@ -23,7 +23,6 @@ git submodule add [https://github.com/momentchan/three-core.git](https://github.
 
 ### 3. Media & Visuals
 * **`AudioManager` & `Bgm`**: Centralized system for sound effects and background music.
-* **`LevaWrapper`**: A UI panel for real-time debugging and variable tweaking.
 * **`DistortedCircle`**: Shader-based procedural visual component.
 
 ### 4. Custom Hooks

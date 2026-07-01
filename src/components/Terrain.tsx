@@ -64,7 +64,7 @@ export function Terrain({
         // TP2-002: Parchment base with sparse emerald speckle.
         //   - Hash on world XZ gives a stable per-fragment pseudo-random.
         //   - smoothstep gates ~5% of fragments to receive emerald tint.
-        //   - uTerrainColor (leva override) is mixed in additively so dialing
+        //   - uTerrainColor defaults to black and is mixed in additively, so
         //     a non-black value in the debug panel still shifts the look.
         mat.colorNode = Fn(() => {
             const worldXZ = modelWorldMatrix.mul(vec4(positionLocal, float(1.0))).xz
@@ -72,7 +72,7 @@ export function Terrain({
             const hash = fract(sin(dot(worldXZ, vec2(12.9898, 78.233))).mul(43758.5453))
             const speckle = smoothstep(float(0.95), float(0.985), hash)
             const base = mix(PARCHMENT, EMERALD, speckle.mul(0.45))
-            // uTerrainColor defaults to (0,0,0); leva can override.
+            // uTerrainColor defaults to (0,0,0).
             const tinted = base.add(uTerrainColor)
             return vec4(tinted, float(1.0))
         })()

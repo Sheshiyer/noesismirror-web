@@ -5,7 +5,7 @@ import { resolve } from "path";
 import { cloudflare } from "@cloudflare/vite-plugin";
 
 export default {
-  base: "./",
+  base: "/",
   resolve: {
     alias: {
       '@core': resolve(__dirname, 'packages/three-core/src')

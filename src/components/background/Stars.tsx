@@ -3,7 +3,6 @@ import { useRef, useMemo, useEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three/webgpu';
 import { uniform, instancedBufferAttribute, Fn, uv, vec3, float, length, smoothstep, mx_hsvtorgb, mx_rgbtohsv, fract, sin, PI2, vec4 } from 'three/tsl';
-import { useControls } from 'leva';
 import { CameraMode, useGameStore } from '../../core/store/gameStore';
 import { uTime } from '../../core/shaders/uniforms';
 
@@ -13,6 +12,14 @@ interface StarsProps {
   speed?: number;
   axis?: [number, number, number];
 }
+
+const STAR_CONFIG = {
+  scale: 0.5,
+  baseColor: '#bbd0f5',
+  hueVariation: 0.1,
+  rim: 0.95,
+  speed: 4,
+};
 
 export function Stars({
   count = 500,
@@ -25,41 +32,19 @@ export function Stars({
   const cameraMode = useGameStore((state) => state.cameraMode);
 
   const uniforms = useMemo(() => ({
-    uScale: uniform(0.25),
-    uColor: uniform(new THREE.Color('#bbd0f5')),
-    uHueVar: uniform(0.1),
-    uRim: uniform(0.95),
-    uSpeed: uniform(2),
+    uScale: uniform(STAR_CONFIG.scale),
+    uColor: uniform(new THREE.Color(STAR_CONFIG.baseColor)),
+    uHueVar: uniform(STAR_CONFIG.hueVariation),
+    uRim: uniform(STAR_CONFIG.rim),
+    uSpeed: uniform(STAR_CONFIG.speed),
     uIntensity: uniform(1),
   }), []);
-
-  const { rim } = useControls('Stars', {
-    scale: {
-      value: 0.5, min: 0, max: 1, step: 0.01,
-      onChange: (v) => (uniforms.uScale.value = v)
-    },
-    baseColor: {
-      value: '#bbd0f5',
-      onChange: (v) => uniforms.uColor.value.set(v)
-    },
-    hueVariation: {
-      value: 0.1, min: 0, max: 1, step: 0.01,
-      onChange: (v) => (uniforms.uHueVar.value = v)
-    },
-    rim: {
-      value: 0.95, min: 0, max: 1, step: 0.01,
-    },
-    speed: {
-      value: 4, min: 0, max: 10, step: 0.01,
-      onChange: (v) => (uniforms.uSpeed.value = v)
-    },
-  }, { collapsed: true });
 
   const { positionAttribute, seedAttribute } = useMemo(() => {
     const pos = [];
     const seedArray = [];
 
-    const rimMin = radius * rim;
+    const rimMin = radius * STAR_CONFIG.rim;
     const rimMax = radius;
     const rimThickness = rimMax - rimMin;
 
@@ -83,7 +68,7 @@ export function Stars({
       positionAttribute: new THREE.InstancedBufferAttribute(new Float32Array(pos), 3),
       seedAttribute: new THREE.InstancedBufferAttribute(new Float32Array(seedArray), 1),
     };
-  }, [count, radius, rim]);
+  }, [count, radius]);
 
   const material = useMemo(() => {
     const mat = new THREE.SpriteNodeMaterial({

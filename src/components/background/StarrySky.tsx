@@ -1,19 +1,21 @@
-import { useControls } from 'leva'
 import { Background } from './Background'
 import { Stars } from './Stars'
 
-export function StarrySky() {
-    const control = useControls('StarrySky', {
-        // raised from 0.1 default — was crushing the starmap into a flat gradient (visible 2026-06-30 audit)
-        intensity: { value: 0.55, min: 0.3, max: 1, step: 0.01 },
-        axis: { value: [0.2, 1, 0] },
-        speed: { value: 1.5, min: 0, max: 5, step: 0.01 },
-    }, { collapsed: true })
+const STARRY_SKY_CONFIG = {
+    intensity: 0.55,
+    axis: [0.2, 1, 0] as [number, number, number],
+    speed: 1.5,
+};
 
+export function StarrySky() {
     return (
         <group>
-            <Stars speed={control.speed} axis={control.axis} />
-            <Background intensity={control.intensity} axis={control.axis} speed={control.speed} />
+            <Stars speed={STARRY_SKY_CONFIG.speed} axis={STARRY_SKY_CONFIG.axis} />
+            <Background
+                intensity={STARRY_SKY_CONFIG.intensity}
+                axis={STARRY_SKY_CONFIG.axis}
+                speed={STARRY_SKY_CONFIG.speed}
+            />
         </group>
     )
 }

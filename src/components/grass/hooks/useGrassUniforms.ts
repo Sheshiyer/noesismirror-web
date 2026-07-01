@@ -1,13 +1,11 @@
-import { useControls } from "leva";
 import { useEffect, useMemo } from "react";
 import * as THREE from "three";
 import { uniform, vec2, vec3 } from "three/tsl";
-import { createGrassControls } from "../core/grassControls";
+import { GRASS_CONTROL_DEFAULTS } from "../core/grassControls";
 
 export function useGrassUniforms() {
 
-    const [params] = useControls('Grass', () => createGrassControls(), { collapsed: true })
-
+    const params = GRASS_CONTROL_DEFAULTS;
 
     const uniforms = useMemo(() => (
         {

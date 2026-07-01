@@ -1,20 +1,19 @@
 import { useRef, useMemo, useEffect } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
-import { useControls } from 'leva'
 import * as THREE from 'three'
 
+const DIRECTIONAL_LIGHT_CONFIG = {
+    rotationSpeed: 0.5,
+    color: '#ffffff',
+    intensity: 2.0,
+    debug: false,
+};
 
 export function DirectionalLight() {
     const directionalLightRef = useRef<THREE.DirectionalLight>(null)
     const helperRef = useRef<THREE.DirectionalLightHelper | null>(null)
     const { scene } = useThree()
-    
-    const { rotationSpeed, color, intensity, debug } = useControls('Directional Light', {
-        rotationSpeed: { value: 0.5, min: 0, max: 2, step: 0.1 },
-        color: { value: '#ffffff' },
-        intensity: { value: 2.0, min: 0, max: 3, step: 0.1 },
-        debug: { value: false },
-    }, { collapsed: true })
+    const { rotationSpeed, color, intensity, debug } = DIRECTIONAL_LIGHT_CONFIG
 
     const basePosition = useMemo(() => new THREE.Vector3(0, 2, 5), [])
     const positionRef = useRef(new THREE.Vector3())
@@ -76,4 +75,3 @@ export function DirectionalLight() {
         <directionalLight ref={directionalLightRef} position={basePosition.toArray()} intensity={1.0} />
     )
 }
-

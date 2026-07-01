@@ -1,7 +1,6 @@
 import { useEffect, useRef, useMemo } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Bone, Group, Vector3, Quaternion, Euler, MathUtils, Object3D } from 'three';
-import { useControls } from 'leva';
 import { useGameStore } from '../../../core/store/gameStore';
 
 interface UseFPVCameraOptions {
@@ -9,6 +8,18 @@ interface UseFPVCameraOptions {
   boneName: string;
   enabled: boolean;
 }
+
+const FPV_CAMERA_CONFIG = {
+  rotateX: -90,
+  rotateY: -90,
+  rotateZ: 0,
+  offsetX: 0,
+  offsetY: 0.5,
+  offsetZ: -0.2,
+  headBodySmoothing: 0.97,
+  mouseRotationSmoothing: 0.1,
+  touchSensitivity: 0.005,
+};
 
 export function useFPVCamera({
   characterRef,
@@ -40,17 +51,7 @@ export function useFPVCamera({
     offsetVec: new Vector3(), // Reuse for camera offset
   }), []);
 
-  const config = useControls('FPV Settings', {
-    rotateX: { value: -90, min: -180, max: 180, step: 1 },
-    rotateY: { value: -90, min: -180, max: 180, step: 1 },
-    rotateZ: { value: 0, min: -180, max: 180, step: 1 },
-    offsetX: { value: 0, min: -2, max: 2, step: 0.01 },
-    offsetY: { value: 0.5, min: -2, max: 2, step: 0.01 },
-    offsetZ: { value: -0.2, min: -2, max: 2, step: 0.01 },
-    headBodySmoothing: { value: 0.97, min: 0, max: 1, step: 0.01 },
-    mouseRotationSmoothing: { value: 0.1, min: 0.01, max: 1, step: 0.01 },
-    touchSensitivity: { value: 0.005, min: 0.001, max: 0.02, step: 0.001 },
-  }, { collapsed: true });
+  const config = FPV_CAMERA_CONFIG;
 
   useEffect(() => {
     if (!enabled || isMobile) return;

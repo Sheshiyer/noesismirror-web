@@ -1,43 +1,34 @@
 import { useMemo, useEffect } from "react";
-import { folder, useControls } from "leva";
 import { uniform, vec2, vec3 } from "three/tsl";
 import * as THREE from "three/webgpu";
 
+const ROSE_CONFIG = {
+  green: "#325825",
+  green2: "#699555",
+  scaleMin: 8,
+  scaleMax: 20,
+  normalScale: 5,
+  hueShift: 0.5,
+  hueRandomness: 0.1,
+  noiseScale: { x: 1, y: 100 },
+  emissiveColor: "#ffffff",
+  emissiveIntensity: 0.4,
+  fresnelPower: 4.2,
+  fresnelIntensity: 0.2,
+  metalness: 0,
+  roughness: 0.7,
+  delayMin: 0,
+  delayMax: 0,
+  growMin: 2,
+  growMax: 5,
+  keepMin: 2,
+  keepMax: 5,
+  dieMin: 2,
+  dieMax: 5,
+};
+
 export function useRoseUniforms() {
-  const [config] = useControls("Rose", () => ({
-    Render: folder(
-      {
-        green: { value: "#325825" },
-        green2: { value: "#699555" },
-        scaleMin: { value: 8, min: 0, max: 20 },
-        scaleMax: { value: 20, min: 0, max: 20 },
-        normalScale: { value: 5, min: 0, max: 5 },
-        hueShift: { value: 0.5, min: 0, max: 1 },
-        hueRandomness: { value: 0.1, min: 0, max: 0.5 },
-        noiseScale: { value: { x: 1, y: 100 }, min: 0, max: 100 },
-        emissiveColor: { value: "#ffffff" },
-        emissiveIntensity: { value: 0.4, min: 0, max: 2 },
-        fresnelPower: { value: 4.2, min: 0.5, max: 20 },
-        fresnelIntensity: { value: 0.2, min: 0, max: 1 },
-        metalness: { value: 0, min: 0, max: 1 },
-        roughness: { value: 0.7, min: 0, max: 1 },
-      },
-      { collapsed: true }
-    ),
-    Lifecycle: folder(
-      {
-        delayMin: { value: 0, min: 0, max: 10 },
-        delayMax: { value: 0, min: 0, max: 10 },
-        growMin: { value: 2, min: 0, max: 10 },
-        growMax: { value: 5, min: 0, max: 10 },
-        keepMin: { value: 2, min: 0, max: 10 },
-        keepMax: { value: 5, min: 0, max: 10 },
-        dieMin: { value: 2, min: 0, max: 10 },
-        dieMax: { value: 5, min: 0, max: 10 },
-      },
-      { collapsed: true }
-    ),
-  }), { collapsed: true });
+  const config = ROSE_CONFIG;
 
   const uniforms = useMemo(
     () => ({

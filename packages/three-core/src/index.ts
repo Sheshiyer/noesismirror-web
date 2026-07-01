@@ -4,7 +4,6 @@ export * from './components/canvas/AsyncCompile';
 export * from './components/canvas/WebGPUCanvas';
 export * from './components/debug/WebGpuPerf';
 export * from './components/input/KeyboardMapper';
-export * from './components/leva/LevaWrapper';
 export * from './components/utils/CanvasCapture';
 export * from './components/visuals/DistortedCircle';
 
@@ -17,4 +16,3 @@ export * from './input/InputSystem';
 export * from './utils/KTX2Preloader';
 export * from './utils/tsl/math';
 export * from './utils/tsl/color';
-
