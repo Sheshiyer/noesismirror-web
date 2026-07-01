@@ -112,6 +112,7 @@ const HELP_ROWS: HelpRow[] = [
   { key: 'P', label: 'Pause · resume' },
   { key: 'H', label: 'Toggle this help' },
   { key: 'Q', label: 'Cycle quality' },
+  { key: 'C', label: 'Cycle camera mode' },
   { key: 'B', label: 'Toggle mini-map' },
   { key: 'F', label: 'Toggle FPS' },
   { key: 'V', label: 'Visited beacons' },
@@ -163,7 +164,7 @@ export default function HUD({ personId, personName, beacons }: HUDProps) {
   const quality = useGameStore((s) => s.quality);
   const setQuality = useGameStore((s) => s.setQuality);
   const cameraMode = useGameStore((s) => s.cameraMode);
-  const setCameraMode = useGameStore((s) => s.setCameraMode);
+  const toggleCameraMode = useGameStore((s) => s.toggleCameraMode);
 
   const reducedMotionPref = useGameStore((s) => s.reducedMotionPref);
   const setReducedMotionPref = useGameStore((s) => s.setReducedMotionPref);
@@ -298,6 +299,9 @@ export default function HUD({ personId, personName, beacons }: HUDProps) {
         const next = nextQuality(quality);
         setQuality(next);
         showToast(`QUALITY: ${next.toUpperCase()}`);
+      } else if (key === 'c') {
+        event.preventDefault();
+        toggleCameraMode();
       } else if (key === 's') {
         event.preventDefault();
         setSettingsOpen(!settingsOpen);
@@ -334,6 +338,7 @@ export default function HUD({ personId, personName, beacons }: HUDProps) {
     toggleMute,
     toggleMiniMap,
     toggleFps,
+    toggleCameraMode,
     setSettingsOpen,
     showToast,
   ]);
@@ -446,7 +451,6 @@ export default function HUD({ personId, personName, beacons }: HUDProps) {
       icon: <ThreeSixtyIcon fontSize="small" />,
     },
   };
-  const nextCameraMode = () => setCameraMode((cameraMode + 1) % 3);
   const qualityLabel =
     quality === 'high'
       ? 'High quality'
@@ -540,8 +544,8 @@ export default function HUD({ personId, personName, beacons }: HUDProps) {
         className="pointer-events-auto absolute top-4 right-4 flex flex-col gap-2"
       >
         <HudIconButton
-          label={`Cycle quality: ${qualityLabel}`}
-          title="Cycle quality (Q)"
+          label="Cycle quality"
+          title={`Cycle quality: ${qualityLabel} (Q)`}
           onClick={() => {
             const next = nextQuality(quality);
             setQuality(next);
@@ -553,7 +557,7 @@ export default function HUD({ personId, personName, beacons }: HUDProps) {
         <HudIconButton
           label={cameraConfig[cameraMode].label}
           title="Cycle camera (C)"
-          onClick={nextCameraMode}
+          onClick={toggleCameraMode}
         >
           {cameraConfig[cameraMode].icon}
         </HudIconButton>
@@ -576,14 +580,17 @@ export default function HUD({ personId, personName, beacons }: HUDProps) {
       </nav>
 
       {/* TP8-006 — Compass top-center (small N/E/S/W rose) */}
-      <div className="pointer-events-none absolute top-16 left-1/2 -translate-x-1/2">
+      <FieldSurface
+        role="img"
+        ariaLabel="Compass"
+        className="pointer-events-none absolute top-16 left-1/2 -translate-x-1/2 flex items-center justify-center px-2 py-2"
+      >
         <svg
           width={60}
           height={60}
           viewBox="0 0 60 60"
           xmlns="http://www.w3.org/2000/svg"
-          aria-label="Compass"
-          role="img"
+          aria-hidden="true"
         >
           <g transform={`rotate(${-(compassYaw * 180) / Math.PI} 30 30)`}>
             <circle
@@ -640,7 +647,7 @@ export default function HUD({ personId, personName, beacons }: HUDProps) {
             </text>
           </g>
         </svg>
-      </div>
+      </FieldSurface>
 
       {/* TP8-005 — Mini-map (toggle with B) */}
       {miniMapOpen && (

@@ -111,3 +111,7 @@ This warning is in the shared primitive file delivered by Task 1 and was not mod
 - `npm run lint` (clean, no warnings)
 - `npm test -- src/components/hud/FieldHudChrome.test.tsx src/components/HUD.test.tsx` (2 passed)
 - `rg "SideBar|AudioButton" src packages` (no output; no legacy names remaining)
+
+## Correction
+
+The previous report overstated closure before the reviewer follow-up landed. The remaining issues were the unstable quality button accessible name, the missing `C` keyboard camera-cycle contract, and the compass needing the shared Noesis-backed surface. Those items are now corrected in `HUD.tsx` and covered by `HUD.test.tsx`.

@@ -107,6 +107,7 @@ describe('HUD', () => {
     renderHud();
 
     expect(screen.getByLabelText('Session controls')).toBeInTheDocument();
+    expect(screen.getByLabelText('Compass')).toBeInTheDocument();
     expect(screen.getByText('traveler@noesis.test')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument();
     expect(screen.getByLabelText('Scene audio inactive')).toBeInTheDocument();
@@ -126,8 +127,8 @@ describe('HUD', () => {
     renderHud();
 
     expect(screen.getByLabelText('Field actions')).toBeInTheDocument();
-    fireEvent.click(screen.getByLabelText('Cycle quality: High quality'));
-    expect(screen.getByLabelText('Cycle quality: Low quality')).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText('Cycle quality'));
+    expect(screen.getByLabelText('Cycle quality')).toHaveAttribute('title', 'Cycle quality: Low quality (Q)');
     expect(screen.getByRole('status')).toHaveTextContent('QUALITY: LOW');
 
     fireEvent.click(screen.getByLabelText('Third person camera'));
@@ -141,5 +142,15 @@ describe('HUD', () => {
 
     fireEvent.click(screen.getByLabelText('Open settings'));
     expect(screen.getByLabelText('Open settings')).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('cycles the camera mode when c is pressed', () => {
+    renderHud();
+
+    expect(screen.getByLabelText('Third person camera')).toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: 'c' });
+
+    expect(screen.getByLabelText('First person camera')).toBeInTheDocument();
   });
 });
