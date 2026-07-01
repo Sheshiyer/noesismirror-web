@@ -1,5 +1,4 @@
 import { PerformanceMonitor, useGLTF } from "@react-three/drei";
-import { LevaWrapper } from "@core";
 import { Canvas, useLoader } from "@react-three/fiber";
 import { useEffect, Suspense, useMemo, useState } from "react";
 import { DirectionalLight } from "../components/DirectionalLight";
@@ -91,14 +90,10 @@ export default function App({ config }: AppProps) {
         toggleCameraMode();
     });
 
-    // Fix G — Hide Leva while the LoadingScreen overlay is up. Same gate the
-    // HUD chip strip uses (isGameStarted from gameStore).
-    const isGameStarted = useGameStore((s) => s.isGameStarted);
-
     return <>
-        {/* Leva visible once the world is mounted. Press `h` to hide manually.
-            Hidden during loading so its panel doesn't leak through the overlay. */}
-        {isGameStarted && <LevaWrapper collapsed={true} initialHidden={false} />}
+        {/* Leva's UI panel calls ReactDOM.render internally and crashes React 19
+            production builds. The useControls hooks can stay registered for now;
+            the panel should return only after Leva is upgraded or replaced. */}
         <DeviceDetector />
         <UI />
         <KeyboardMapper input={input} keyMap={keyBindings} />

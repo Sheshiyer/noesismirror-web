@@ -42,13 +42,32 @@ app.use('*', cors({
   maxAge: 86400,
 }));
 
-// Health check endpoint (public, no auth)
+// Health check endpoints (public, no auth)
 app.get('/health', (c) => {
   return c.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
     worker: 'noesis-api',
   });
+});
+app.get('/api/health', (c) => {
+  return c.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    worker: 'noesis-api',
+  });
+});
+
+app.post('/client-events', async (c) => {
+  let event: unknown;
+  try {
+    event = await c.req.json();
+  } catch {
+    return c.json({ error: 'Invalid JSON' }, 400);
+  }
+
+  console.error('client-event', JSON.stringify(event));
+  return c.json({ ok: true }, 202);
 });
 
 // Hosts allowed as ?redirect= targets on /auth/callback.
