@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Fix H.2 — BeaconArtifact.
 //
 // Loads the section-specific Meshy-baked GLB for a beacon, clones it (so the
@@ -11,7 +10,6 @@
 import { useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
-// @ts-expect-error — JS module from three's addons, no types shipped
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import * as THREE from 'three/webgpu';
 import { uniform } from 'three/tsl';
@@ -64,7 +62,7 @@ export function BeaconArtifact({ beaconId, order, state }: BeaconArtifactProps) 
 
   // One uniform per BeaconArtifact instance — drives the emissive intensity
   // of every mesh in the cloned scene through the shared material.
-  const uStateIntensity = useMemo(() => uniform(BEACON_STATE_INTENSITY[state]), []);
+  const uStateIntensity = useMemo(() => uniform(BEACON_STATE_INTENSITY.dormant), []);
 
   const emissiveColor = SECTION_EMISSIVE[sectionId] ?? COHERENCE_EMERALD;
 

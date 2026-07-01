@@ -6,7 +6,7 @@ import { useGameStore, type Quality } from '../core/store/gameStore';
 import { useAudioStore } from '../core/store/audioStore';
 import { useVisitedStore } from '../core/store/visitedStore';
 import { API_URL } from '../config';
-import { signOut } from './TokenHandler';
+import { signOut } from '../auth/signOut';
 import Settings from './Settings';
 
 export interface HUDProps {

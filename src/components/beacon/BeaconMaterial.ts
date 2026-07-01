@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Fix H.1 — Unified BeaconMaterial.
 //
 // Brand-aligned NodeMaterial that replaces every mesh material on a loaded

@@ -70,7 +70,12 @@ async function hasGrant(db: D1Database, email: string, personId: string): Promis
  */
 assetsRoutes.get('/assets/:personId/*', async (c) => {
   const personId = c.req.param('personId');
-  const assetPath = c.req.path.replace(`/api/assets/${personId}/`, '');
+  let assetPath: string;
+  try {
+    assetPath = decodeURIComponent(c.req.path.replace(`/api/assets/${personId}/`, ''));
+  } catch {
+    return c.json({ error: 'Invalid asset path encoding' }, 400);
+  }
   const email = c.get('email');
 
   // Validate path - prevent directory traversal

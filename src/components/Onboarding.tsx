@@ -359,6 +359,14 @@ export default function Onboarding() {
   // modal + returning-user chip may still surface).
   const onboardingChromeVisible = phase !== 'completion';
 
+  // Completion modal CTA — restart resets onboarding via ?onboard=1.
+  const restartHref = useMemo(() => {
+    if (typeof window === 'undefined') return '?onboard=1';
+    const url = new URL(window.location.href);
+    url.searchParams.set('onboard', '1');
+    return url.pathname + url.search;
+  }, []);
+
   // TP7-022 — reduced-motion fallback: render an instant text card with a
   // single dismiss button instead of the cinematic fade.
   if (onboardingChromeVisible && reducedMotion && phase === 'arriving') {
@@ -386,14 +394,6 @@ export default function Onboarding() {
       </div>
     );
   }
-
-  // Completion modal CTA — restart resets onboarding via ?onboard=1.
-  const restartHref = useMemo(() => {
-    if (typeof window === 'undefined') return '?onboard=1';
-    const url = new URL(window.location.href);
-    url.searchParams.set('onboard', '1');
-    return url.pathname + url.search;
-  }, []);
 
   return (
     <>

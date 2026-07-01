@@ -93,7 +93,7 @@ export function Terrain({
         })()
 
         return mat
-    }, [])
+    }, [grassAreaSize])
 
     return (
         <group>
@@ -110,4 +110,3 @@ export function Terrain({
         </group>
     )
 }
-

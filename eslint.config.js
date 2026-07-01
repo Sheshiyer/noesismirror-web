@@ -35,6 +35,14 @@ export default tseslint.config(
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
+      // React Compiler-era rules treat normal R3F/WebGPU imperative mutation
+      // as React state mutation. Keep hook ordering/deps strict, but do not
+      // block Three.js refs, uniforms, materials, and scene objects.
+      'react-hooks/immutability': 'off',
+      'react-hooks/refs': 'off',
+      'react-hooks/set-state-in-effect': 'off',
+      'react-hooks/purity': 'off',
+      'react-hooks/static-components': 'off',
       'react-refresh/only-export-components': [
         'warn',
         { allowConstantExport: true },

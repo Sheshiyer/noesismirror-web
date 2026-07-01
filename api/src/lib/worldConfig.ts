@@ -45,23 +45,130 @@ export interface WorldConfig {
   beacons: Beacon[];
 }
 
+const FALLBACK_MIND_MAP_PATH = "mind-map/Harshita's Personal Companion Dossier.json";
+
+const STATIC_ASSETS: BeaconAsset[] = [
+  {
+    path: 'audio/deep-dive-long.mp3',
+    beaconType: 'audio',
+    label: 'Deep Dive Audio',
+    summary: 'Comprehensive audio exploration',
+  },
+  {
+    path: 'video/video-brief.mp4',
+    beaconType: 'video',
+    label: 'Video Brief',
+    summary: 'Visual introduction',
+  },
+  {
+    path: 'reports/briefing.md',
+    beaconType: 'reading',
+    label: 'Briefing Report',
+    summary: 'Executive summary',
+  },
+  {
+    path: 'reports/study-guide.md',
+    beaconType: 'study',
+    label: 'Study Guide',
+    summary: 'Detailed learning material',
+  },
+  {
+    path: 'quiz/quiz.md',
+    beaconType: 'study',
+    label: 'Quiz',
+    summary: 'Knowledge check',
+  },
+  {
+    path: 'flashcards/flashcards.md',
+    beaconType: 'study',
+    label: 'Flashcards',
+    summary: 'Quick review cards',
+  },
+  {
+    path: 'slide-decks/detailed.pdf',
+    beaconType: 'slides',
+    label: 'Detailed Slides',
+    summary: 'Full presentation',
+  },
+  {
+    path: 'slide-decks/preview.pdf',
+    beaconType: 'slides',
+    label: 'Preview Slides',
+    summary: 'Quick overview presentation',
+  },
+  {
+    path: 'slide-decks/vimshottari-timeline.pdf',
+    beaconType: 'slides',
+    label: 'Vimshottari Timeline',
+    summary: 'Temporal analysis',
+  },
+];
+
+const MIND_MAP_ASSET: Omit<BeaconAsset, 'path'> = {
+  beaconType: 'study',
+  label: 'Mind Map',
+  summary: 'Interactive knowledge map',
+};
+
 /**
- * Known asset paths in the premium-assets structure.
- * Derived from the directory structure created by the generator.
- * beaconType maps each asset onto the frontend's BeaconType enum.
+ * Legacy fallback used when a caller cannot list the person's R2 prefix.
+ * New code should call resolveBeaconAssets(assetPaths) with the live object
+ * list so entry-specific filenames are reflected in generated worlds.
  */
 export const KNOWN_ASSETS: BeaconAsset[] = [
-  { path: 'audio/deep-dive-long.mp3',                              beaconType: 'audio',   label: 'Deep Dive Audio',     summary: 'Comprehensive audio exploration' },
-  { path: 'video/video-brief.mp4',                                 beaconType: 'video',   label: 'Video Brief',         summary: 'Visual introduction' },
-  { path: "mind-map/Harshita's Personal Companion Dossier.json",   beaconType: 'study',   label: 'Mind Map',            summary: 'Interactive knowledge map' },
-  { path: 'reports/briefing.md',                                   beaconType: 'reading', label: 'Briefing Report',     summary: 'Executive summary' },
-  { path: 'reports/study-guide.md',                                beaconType: 'study',   label: 'Study Guide',         summary: 'Detailed learning material' },
-  { path: 'quiz/quiz.md',                                          beaconType: 'study',   label: 'Quiz',                summary: 'Knowledge check' },
-  { path: 'flashcards/flashcards.md',                              beaconType: 'study',   label: 'Flashcards',          summary: 'Quick review cards' },
-  { path: 'slide-decks/detailed.pdf',                              beaconType: 'slides',  label: 'Detailed Slides',     summary: 'Full presentation' },
-  { path: 'slide-decks/preview.pdf',                               beaconType: 'slides',  label: 'Preview Slides',      summary: 'Quick overview presentation' },
-  { path: 'slide-decks/vimshottari-timeline.pdf',                  beaconType: 'slides',  label: 'Vimshottari Timeline', summary: 'Temporal analysis' },
+  STATIC_ASSETS[0],
+  STATIC_ASSETS[1],
+  { path: FALLBACK_MIND_MAP_PATH, ...MIND_MAP_ASSET },
+  ...STATIC_ASSETS.slice(2),
 ];
+
+function normalizeAssetPath(path: string): string {
+  return path.replace(/^\/+/, '');
+}
+
+function findMindMapPath(assetPaths: string[]): string | undefined {
+  return assetPaths
+    .map(normalizeAssetPath)
+    .filter((path) => path.startsWith('mind-map/') && path.endsWith('.json'))
+    .sort((a, b) => a.localeCompare(b))[0];
+}
+
+function encodeAssetPath(path: string): string {
+  return path.split('/').map(encodeURIComponent).join('/');
+}
+
+/**
+ * Resolves public beacon assets from the actual uploaded object inventory.
+ * If no inventory is available, falls back to the original Harshita mapping
+ * for backwards compatibility with existing callers.
+ */
+export function resolveBeaconAssets(assetPaths?: string[]): BeaconAsset[] {
+  if (!assetPaths) {
+    return KNOWN_ASSETS;
+  }
+
+  const available = new Set(assetPaths.map(normalizeAssetPath));
+  const resolved: BeaconAsset[] = [];
+
+  for (const asset of STATIC_ASSETS.slice(0, 2)) {
+    if (available.has(asset.path)) {
+      resolved.push(asset);
+    }
+  }
+
+  const mindMapPath = findMindMapPath(assetPaths);
+  if (mindMapPath) {
+    resolved.push({ path: mindMapPath, ...MIND_MAP_ASSET });
+  }
+
+  for (const asset of STATIC_ASSETS.slice(2)) {
+    if (available.has(asset.path)) {
+      resolved.push(asset);
+    }
+  }
+
+  return resolved;
+}
 
 /**
  * Generates beacon positions on a golden-angle spiral in the XZ plane.
@@ -81,16 +188,17 @@ export function generateSpiralPosition(index: number, total: number): { x: numbe
 
 /**
  * Transforms an R2 manifest into a world-config with positioned beacons.
- * Uses KNOWN_ASSETS since the manifest doesn't contain an assets array.
+ * Passing assetPaths lets callers reflect entry-specific filenames from R2.
  */
-export function transformManifestToWorldConfig(manifest: Manifest): WorldConfig {
-  const beacons: Beacon[] = KNOWN_ASSETS.map((asset, index) => ({
+export function transformManifestToWorldConfig(manifest: Manifest, assetPaths?: string[]): WorldConfig {
+  const assets = resolveBeaconAssets(assetPaths);
+  const beacons: Beacon[] = assets.map((asset, index) => ({
     id: `beacon-${index}`,
     label: asset.label,
     summary: asset.summary,
     type: asset.beaconType,
-    position: generateSpiralPosition(index, KNOWN_ASSETS.length),
-    assetUrl: `/api/assets/${manifest.personId}/${asset.path}`,
+    position: generateSpiralPosition(index, assets.length),
+    assetUrl: `/api/assets/${encodeURIComponent(manifest.personId)}/${encodeAssetPath(asset.path)}`,
   }));
 
   return {

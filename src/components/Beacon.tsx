@@ -242,7 +242,7 @@ export function Beacon({ beacon, state, distance = Infinity, personId, onClick }
         // ~19s cycle: 4s inhale (grow), 7s hold (peak), 8s exhale (shrink).
         const cycle = 19;
         const phase = (t % cycle) / cycle;
-        let scale = 1;
+        let scale: number;
         if (phase < 4 / 19) {
           // inhale 0..1
           const p = phase / (4 / 19);

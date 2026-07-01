@@ -97,7 +97,7 @@ export default function Settings() {
     } catch {
       return null;
     }
-  }, [open]);
+  }, []);
 
   if (!open) return null;
 

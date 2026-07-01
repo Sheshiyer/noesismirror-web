@@ -19,7 +19,7 @@ import {
 } from "three/tsl";
 import { uGlobalHueShift } from "../../core/shaders/uniforms";
 import { shiftHSV } from "../../../packages/three-core/src/utils/tsl/color";
-import { BeamSceneContext } from "../../app/App";
+import { BeamSceneContext } from "../../app/BeamSceneContext";
 import { useGameStore } from "../../core/store/gameStore";
 
 // Tier 1 — beam color targets driven by closest beacon. Default glow stays

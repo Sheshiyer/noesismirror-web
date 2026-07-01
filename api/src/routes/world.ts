@@ -5,6 +5,7 @@
 import { Hono } from 'hono';
 import type { Bindings, Variables } from '../index';
 import { transformManifestToWorldConfig } from '../lib/worldConfig';
+import { listPersonAssetPaths } from '../lib/personAssets';
 
 export const worldRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -62,8 +63,8 @@ worldRoutes.get('/world/:personId', async (c) => {
     const manifestText = await object.text();
     const manifest: Manifest = JSON.parse(manifestText);
 
-    // Transform and return world-config
-    const worldConfig = transformManifestToWorldConfig(manifest);
+    const assetPaths = await listPersonAssetPaths(c.env.PACKS, personId);
+    const worldConfig = transformManifestToWorldConfig(manifest, assetPaths);
 
     return c.json(worldConfig);
   } catch (err) {

@@ -9,7 +9,7 @@ import { smaa } from "three/addons/tsl/display/SMAANode.js";
 
 import { useGameStore, CameraMode } from "../../core/store/gameStore";
 import { useEffectsControls } from "./useEffectsControls";
-import { BeamSceneContext } from "../../app/App";
+import { BeamSceneContext } from "../../app/BeamSceneContext";
 import { useContext } from "react";
 
 export default function Effects() {

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { API_URL } from '../config';
-import { signOut } from './TokenHandler';
+import { signOut } from '../auth/signOut';
 
 interface LocationState {
   reason?: 'session_expired' | 'no_access';

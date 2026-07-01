@@ -14,11 +14,8 @@ import { preloadVATAssets } from "../components/Rose/core";
 import { WorldController } from "../components/WorldController";
 import { NorthStar, CharacterShadow } from "../components/background/Background";
 import { HDREnvironment } from "../components/HDREnvironment";
-// HorizonHalo intentionally not rendered (see scene mount below). Leaving the
-// import out so the bundler tree-shakes the module entirely.
-// import { HorizonHalo } from "../components/background/HorizonHalo";
-import { createContext } from "react";
 import * as THREE from "three/webgpu";
+import { BeamSceneContext } from "./BeamSceneContext";
 import { KeyboardMapper } from "@core";
 import { input, keyBindings } from "../core/input/controls";
 import { useShortcut } from "@core/hooks/useShortcut";
@@ -42,8 +39,6 @@ useGLTF.preload(MODEL_PATHS);
 
 preloadVATAssets('/vat/Rose_meta.json');
 preloadVATAssets('/vat/RoseLowPoly_meta.json');
-
-export const BeamSceneContext = createContext<THREE.Scene | null>(null);
 
 export interface AppProps {
   config?: WorldConfig;
