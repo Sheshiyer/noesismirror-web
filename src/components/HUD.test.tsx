@@ -7,10 +7,6 @@ import { CameraMode, useGameStore } from '../core/store/gameStore';
 import { useAudioStore } from '../core/store/audioStore';
 import { useVisitedStore } from '../core/store/visitedStore';
 
-vi.mock('./Settings', () => ({
-  default: () => null,
-}));
-
 const beacons: Beacon[] = [
   {
     id: 'beacon-1',
@@ -163,5 +159,15 @@ describe('HUD', () => {
     expect(performance).toBeInTheDocument();
     expect(within(performance).getByText('FPS')).toBeInTheDocument();
     expect(within(performance).getByText('0')).toBeInTheDocument();
+  });
+
+  it('keeps an open settings drawer visible and accessible while the HUD is auto-hidden', () => {
+    useGameStore.setState({ hudVisible: false, settingsOpen: true });
+
+    const { container } = renderHud();
+
+    expect(container.firstElementChild).toHaveAttribute('aria-hidden', 'false');
+    expect(container.firstElementChild).toHaveClass('opacity-100');
+    expect(screen.getByRole('dialog', { name: 'Settings' })).toBeInTheDocument();
   });
 });

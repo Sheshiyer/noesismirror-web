@@ -432,7 +432,7 @@ export default function HUD({ personId, personName, beacons }: HUDProps) {
     }
   }, [navigate]);
 
-  const effectiveVisible = hudVisible || paused || helpOpen;
+  const effectiveVisible = hudVisible || paused || helpOpen || settingsOpen || visitedListOpen;
 
   const visitedCount = visitedSet.size;
   const beaconTotal = beacons.length;
@@ -513,6 +513,7 @@ export default function HUD({ personId, personName, beacons }: HUDProps) {
 
       <FieldSurface
         ariaLabel="Session controls"
+        data-noesis-hud-control="true"
         className="pointer-events-auto absolute top-4 right-20 flex max-w-[min(34rem,calc(100vw-7rem))] items-center gap-3 px-4 py-2"
       >
         {userEmail && (
@@ -541,6 +542,7 @@ export default function HUD({ personId, personName, beacons }: HUDProps) {
 
       <nav
         aria-label="Field actions"
+        data-noesis-hud-control="true"
         className="pointer-events-auto absolute top-4 right-4 flex flex-col gap-2"
       >
         <HudIconButton
@@ -811,6 +813,7 @@ export default function HUD({ personId, personName, beacons }: HUDProps) {
         <aside
           role="complementary"
           aria-label="Visited beacons"
+          data-noesis-hud-control="true"
           className="pointer-events-auto fixed top-1/2 right-6 z-30 w-80 max-w-[80vw] -translate-y-1/2 border border-noesis-gold/40 bg-noesis-void/90 p-6"
         >
           <div className="mb-4 flex items-center justify-between">

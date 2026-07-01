@@ -1,13 +1,13 @@
-import type { ReactNode } from 'react';
+import type { HTMLAttributes, ReactNode } from 'react';
 import { noesisSurfaceClass } from './fieldHudChromeStyles';
 
 const focus =
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-noesis-gold/60 focus-visible:ring-offset-2 focus-visible:ring-offset-noesis-void';
 
-export interface FieldSurfaceProps {
+export interface FieldSurfaceProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode;
   className?: string;
-  role?: string;
+  role?: HTMLAttributes<HTMLDivElement>['role'];
   ariaLabel?: string;
 }
 
@@ -53,9 +53,15 @@ export function FieldSurface({
   className = '',
   role,
   ariaLabel,
+  ...surfaceProps
 }: FieldSurfaceProps) {
   return (
-    <div role={role} aria-label={ariaLabel} className={noesisSurfaceClass(className)}>
+    <div
+      {...surfaceProps}
+      role={role}
+      aria-label={ariaLabel}
+      className={noesisSurfaceClass(className)}
+    >
       <CornerBrackets />
       {children}
     </div>

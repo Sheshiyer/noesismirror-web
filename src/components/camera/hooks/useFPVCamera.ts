@@ -71,9 +71,14 @@ export function useFPVCamera({
   useEffect(() => {
     if (!enabled || !isMobile) return;
 
+    const isHudInteractiveTarget = (t: Touch) => {
+      const target = document.elementFromPoint(t.clientX, t.clientY);
+      return Boolean(target?.closest('[data-noesis-hud-control="true"]'));
+    };
+
     const isValidTouchArea = (t: Touch) => {
       const isJoystickArea = (t.clientX < window.innerWidth * 0.4) && (t.clientY > window.innerHeight * 0.4);
-      const isHudControlArea = (t.clientX > window.innerWidth * 0.85) && (t.clientY < window.innerHeight * 0.2);
+      const isHudControlArea = isHudInteractiveTarget(t);
       return !isJoystickArea && !isHudControlArea;
     };
 

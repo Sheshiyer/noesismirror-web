@@ -118,6 +118,7 @@ export default function Settings() {
     <aside
       role="dialog"
       aria-label="Settings"
+      data-noesis-hud-control="true"
       className={noesisSurfaceClass(
         'pointer-events-auto fixed top-0 right-0 z-50 h-full w-96 max-w-[92vw] overflow-y-auto border-l px-0 text-noesis-parchment',
       )}
