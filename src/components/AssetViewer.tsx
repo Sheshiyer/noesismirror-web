@@ -1,10 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import CloseIcon from '@mui/icons-material/Close';
+import DownloadIcon from '@mui/icons-material/Download';
+import IosShareIcon from '@mui/icons-material/IosShare';
 import type { Beacon } from '../types/world';
 import { renderers } from './assetRenderers/registry';
 import { useGameStore } from '../core/store/gameStore';
 import { useVisitedStore } from '../core/store/visitedStore';
 import { useAudioStore } from '../core/store/audioStore';
 import { buildAssetUrl } from '../config';
+import { CornerBrackets, HudIconButton } from './hud/FieldHudChrome';
 
 export interface AssetViewerProps {
   beacon: Beacon;
@@ -47,7 +51,6 @@ function formatDuration(seconds: number | null): string | null {
 }
 
 export default function AssetViewer({ beacon, onClose, reducedMotion }: AssetViewerProps) {
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   const Renderer = renderers[beacon.type];
@@ -77,7 +80,7 @@ export default function AssetViewer({ beacon, onClose, reducedMotion }: AssetVie
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    closeButtonRef.current?.focus();
+    panelRef.current?.querySelector<HTMLButtonElement>('button[aria-label="Close"]')?.focus();
   }, []);
 
   // TP4-001 — kick the entering->entered transition on next frame.
@@ -383,12 +386,14 @@ export default function AssetViewer({ beacon, onClose, reducedMotion }: AssetVie
     >
       <div
         ref={panelRef}
-        className={`relative bg-noesis-surface border border-noesis-gold/40 max-w-5xl w-[90vw] max-h-[88vh] flex flex-col py-8 px-10 origin-center ${panelTransform} ${panelMotion}`}
+        className={`relative flex max-h-[88vh] w-[90vw] max-w-5xl origin-center flex-col border border-noesis-gold/40 bg-noesis-surface px-10 py-8 shadow-[0_0_40px_rgba(7,11,29,0.7)] ${panelTransform} ${panelMotion}`}
         role={Renderer ? 'dialog' : 'alertdialog'}
         aria-modal="true"
         aria-label={beacon.label}
         aria-describedby="viewer-summary"
       >
+        <CornerBrackets />
+
         {/* TP4-003 — playback progress bar (only when a media element is present) */}
         {hasMedia && (
           <div
@@ -420,8 +425,8 @@ export default function AssetViewer({ beacon, onClose, reducedMotion }: AssetVie
                 {beacon.type}
               </p>
               {/* TP4-022 — scene-audio dimmed indicator (always visible while open) */}
-              <span className="font-mono text-xs text-noesis-parchment/40 uppercase tracking-widest">
-                {assetPlaybackActive ? '· media playing · scene audio low' : '· scene audio dimmed'}
+              <span className="border border-noesis-gold/25 bg-noesis-void/60 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-noesis-parchment/50">
+                {assetPlaybackActive ? 'media playing | scene audio low' : 'scene audio dimmed'}
               </span>
             </div>
             {beacon.summary && (
@@ -433,39 +438,29 @@ export default function AssetViewer({ beacon, onClose, reducedMotion }: AssetVie
               </p>
             )}
           </div>
-          <div className="flex items-center gap-3 shrink-0">
-            {/* TP4-025 — share */}
-            <button
-              type="button"
-              onClick={handleShare}
-              className="font-display text-noesis-gold text-xl leading-none hover:text-noesis-emerald focus:outline-none focus:ring-1 focus:ring-noesis-gold/60 px-2"
-              aria-label="Share link"
-              title="Copy link"
-            >
-              {'⤴'}
-            </button>
-            {/* TP4-026 — download */}
+          <div className="flex shrink-0 items-center gap-2">
+            <HudIconButton label="Share link" title="Copy link" onClick={handleShare}>
+              <IosShareIcon fontSize="small" />
+            </HudIconButton>
             <a
               href={downloadHref}
               download={beacon.label}
-              className="font-display text-noesis-gold text-xl leading-none hover:text-noesis-emerald focus:outline-none focus:ring-1 focus:ring-noesis-gold/60 px-2"
+              className="grid h-10 w-10 place-items-center border border-noesis-gold/35 bg-noesis-void/70 text-noesis-parchment transition-colors hover:border-noesis-emerald hover:text-noesis-emerald focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-noesis-gold/60"
               aria-label="Download asset"
               title="Download"
             >
-              {'↓'}
+              <DownloadIcon fontSize="small" />
             </a>
-            <span className="font-mono text-xs text-noesis-parchment/50 uppercase tracking-widest hidden sm:inline">
-              [ ESC | G ]
+            <span className="hidden font-mono text-[10px] uppercase tracking-[0.24em] text-noesis-parchment/50 sm:inline">
+              ESC | G
             </span>
-            <button
-              ref={closeButtonRef}
-              type="button"
+            <HudIconButton
+              label="Close"
+              title="Close (ESC)"
               onClick={handleClose}
-              className="font-display text-noesis-gold text-2xl leading-none hover:text-noesis-emerald focus:outline-none focus:ring-1 focus:ring-noesis-gold/60 px-2"
-              aria-label="Close"
             >
-              {'×'}
-            </button>
+              <CloseIcon fontSize="small" />
+            </HudIconButton>
             {/* TP4-025 — copied toast */}
             {copied && (
               <span

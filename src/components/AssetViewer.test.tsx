@@ -71,6 +71,9 @@ describe('AssetViewer', () => {
     render(
       <AssetViewer beacon={readingBeacon} onClose={vi.fn()} reducedMotion={false} />
     );
+    expect(screen.getByLabelText('Share link')).toBeInTheDocument();
+    expect(screen.getByLabelText('Download asset')).toBeInTheDocument();
+    expect(screen.getByLabelText('Close')).toBeInTheDocument();
     expect(document.activeElement).toBe(screen.getByLabelText('Close'));
   });
 

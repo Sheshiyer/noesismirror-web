@@ -6,6 +6,7 @@ dist
 .vercel
 .vite
 .wrangler
+.superpowers/
 
 # Local env files
 .dev.vars
